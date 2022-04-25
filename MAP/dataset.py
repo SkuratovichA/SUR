@@ -11,17 +11,17 @@ class Perturbator:
   def augment_data(self, data, sr):
     data = torch.tensor(data).unsqueeze(0)
     val = np.random.rand()
-    _id = np.random.randint(11)
+    _id = np.random.randint(10)
     aug_data = np.empty([1])
     try:
 
       if _id < 2:
         aug_data = self.__change_speed(data, sr)
-      elif 1 < _id < 7:
+      elif 1 < _id < 6:
         aug_data = self.__reverb(data, val)
-      elif 6 < _id < 9:
+      elif 5 < _id < 8:
         aug_data = self.__add_crowd_noise(data)
-      elif 8 < _id < 11:
+      elif 7 < _id < 10:
         aug_data = self.__add_noise(data, val)
 
     except:

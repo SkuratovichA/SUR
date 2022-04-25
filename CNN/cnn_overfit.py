@@ -19,32 +19,27 @@ import os
 from typing import Optional, Union
 
 import torchvision
-import torchvision.transforms as transforms
-import numpy as np
-import torch
-from torch import nn
-from torch.utils.data import DataLoader, random_split
-import pytorch_lightning as pl
-
-from torchmetrics import Accuracy
-
-from PIL import Image
 import PIL
-import imgaug as ia
-from imgaug import augmenters as iaa
-
 import tqdm
-import matplotlib.pyplot as plt
-import pandas as pd
-from torch.utils.data import Dataset
-
-from pprint import pprint
-
 import wandb
-
+import torch
+import numpy as np
+import imgaug as ia
+import pandas as pd
+from torch import nn
+from PIL import Image
+from pprint import pprint
+import pytorch_lightning as pl
+import matplotlib.pyplot as plt
+from torchmetrics import Accuracy
+from torch.utils.data import Dataset
+from imgaug import augmenters as iaa
+import torchvision.transforms as transforms
 from pytorch_lightning.loggers import WandbLogger
+from torch.utils.data import DataLoader, random_split
+
 # from safe_gpu import safe_gpu
-# gpu_owner = safe_gpu.GPUOwner(1)
+# gpu_owner = safe_gpu.GPUOwner(0)
 
 import torch.nn.functional as F
 
@@ -73,6 +68,7 @@ class ImageTransform:
     def __init__(self, is_train: bool):
         if is_train:
             self.transform = transforms.Compose([
+                iaa.Sequential([
                     iaa.Resize((80,80)),
                     iaa.Sometimes(0.8, iaa.GaussianBlur(sigma=(0,2.0))),
                     iaa.Fliplr(0.9),
@@ -109,6 +105,7 @@ class ImageTransform:
                 # transforms.Normalize(mean=[133.8628, 104.0229, 106.3728],
                                     #  std=[54.8065, 56.6426, 54.9152]),
             ])
+
     def __call__(self, img: Image.Image) -> torch.Tensor:
         return self.transform(img)
 
@@ -119,8 +116,8 @@ class SmallDataset(pl.LightningDataModule):
         self.root_dir = root_dir
         self.batch_size = batch_size
         self.num_workers=1
-        self.train_dataset = SURDataset(root_dir=root_dir, csv='train.csv', transform=ImageTransform(is_train=True))
-        self.val_dataset = SURDataset(root_dir=root_dir, csv='dev.csv', transform=ImageTransform(is_train=False))
+        self.train_dataset = SURDataset(root_dir=root_dir, csv='train_cnn.csv', transform=ImageTransform(is_train=True))
+        self.val_dataset = SURDataset(root_dir=root_dir, csv='dev_cnn.csv', transform=ImageTransform(is_train=False))
         self.classes = 1
     
     def train_dataloader(self) -> DataLoader:
@@ -248,7 +245,7 @@ class VeriOverFit(pl.LightningModule):
 
 
 
-wandb_logger = WandbLogger(log_model='all', name='RMSprop2', project="pytorch_lightning_test")
+wandb_logger = WandbLogger(log_model='all', name='RMSprop2', project="pytorch_lightning_test", offline=True)
 
 from pytorch_lightning.callbacks import Callback
  
@@ -334,8 +331,3 @@ main()
 #     torch.load("OverFitDumbass.pt")
 # )
 # test_model.eval()
-
-
-
-#
-

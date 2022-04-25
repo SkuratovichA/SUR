@@ -43,8 +43,8 @@ from pprint import pprint
 import wandb
 
 from pytorch_lightning.loggers import WandbLogger
-# from safe_gpu import safe_gpu
-# gpu_owner = safe_gpu.GPUOwner(1)
+from safe_gpu import safe_gpu
+gpu_owner = safe_gpu.GPUOwner(1)
 
 import torch.nn.functional as F
 
@@ -73,6 +73,7 @@ class ImageTransform:
     def __init__(self, is_train: bool):
         if is_train:
             self.transform = transforms.Compose([
+                iaa.Sequential([
                     iaa.Resize((80,80)),
                     iaa.Sometimes(0.8, iaa.GaussianBlur(sigma=(0,2.0))),
                     iaa.Fliplr(0.9),
@@ -119,8 +120,8 @@ class SmallDataset(pl.LightningDataModule):
         self.root_dir = root_dir
         self.batch_size = batch_size
         self.num_workers=1
-        self.train_dataset = SURDataset(root_dir=root_dir, csv='train.csv', transform=ImageTransform(is_train=True))
-        self.val_dataset = SURDataset(root_dir=root_dir, csv='dev.csv', transform=ImageTransform(is_train=False))
+        self.train_dataset = SURDataset(root_dir=root_dir, csv='train_cnn.csv', transform=ImageTransform(is_train=True))
+        self.val_dataset = SURDataset(root_dir=root_dir, csv='dev_cnn.csv', transform=ImageTransform(is_train=False))
         self.classes = 1
     
     def train_dataloader(self) -> DataLoader:
@@ -248,7 +249,7 @@ class VeriOverFit(pl.LightningModule):
 
 
 
-wandb_logger = WandbLogger(log_model='all', name='RMSprop2', project="pytorch_lightning_test")
+wandb_logger = WandbLogger(log_model='all', name='RMSprop2', project="pytorch_lightning_test", offline=True)
 
 from pytorch_lightning.callbacks import Callback
  
@@ -334,8 +335,3 @@ main()
 #     torch.load("OverFitDumbass.pt")
 # )
 # test_model.eval()
-
-
-
-#
-

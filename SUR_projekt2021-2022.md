@@ -38,7 +38,7 @@ Jméno kazdého souboru je rozdileno do poli pomoci podtrzitek
 
 ---
 Ke trénováni detektoru muzete pouzit pouze tyto dodané trénovaci data.
-NENi POVOLENO jakékoli vyuziti jiných externich recových ci obrázkových
+NENI POVOLENO jakékoli vyuziti jiných externich recových ci obrázkových
 dat, jakozto i pouziti jiz predtrénovaných modelu (napr. pro extrakci
 reprezentaci (embeddings) obliceju nebo hlasu). 
 

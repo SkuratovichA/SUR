@@ -99,7 +99,7 @@ class Classifier:
         for _, test in enumerate(self.test_nd.wavsMfcc):
             ll_t = self.bgmm_target.score_samples(test)
             ll_n = self.bgmm_non_target.score_samples(test)
-            print(test, ":", int(sum(ll_t) < sum(ll_n)), f"{(sum(ll_t) - sum(ll_n)):.2f}    {int((sum(ll_t) - sum(ll_n)) > 0)}")
+            print(test.split(), ":", int(sum(ll_t) < sum(ll_n)), f"{(sum(ll_t) - sum(ll_n)):.2f}    {int((sum(ll_t) - sum(ll_n)) > 0)}")
 
     def print_score(self):
 

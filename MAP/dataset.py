@@ -6,8 +6,8 @@ from librosa.feature import mfcc
 import speechbrain as sb
 import torch
 
-class Perturbator:
-  '''Perturbator class, augments stuff'''
+class Augmentor:
+  '''Augmentor class, augments stuff'''
   def augment_data(self, data, sr):
     data = torch.tensor(data).unsqueeze(0)
     val = np.random.rand()
@@ -26,7 +26,7 @@ class Perturbator:
 
     except:
 
-      if _id < 6:
+      if _id < 5:
         aug_data, speed_up = self.__change_speed(data, sr)
       else: 
         aug_data = self.__add_noise(data, val)
@@ -148,7 +148,7 @@ class Dataset:
         self.samples = {}
         self.dirfilter = lambda x: os.path.splitext(os.path.basename(x))  # 'smth/honza.wav' -> ['honza', 'wav']
         self.file_extension = lambda x: self.dirfilter(x)[1][1:]
-        self.perturbator = Perturbator()
+        self.augmentor = Augmentor()
 
         extensions = [extensions] if isinstance(extensions, str) else extensions
         if extensions == 'wav':
@@ -170,12 +170,11 @@ class Dataset:
               VAD = VoiceActivityDetector()
               VAD.process(sig) # cut silence
               sig = VAD.get_voice_samples()
-              if aug: # augment
+              if aug: # augment 
                 self.__augment_data(sig, f, rate)
               sig = (sig - sig.mean()) / np.abs(sig).max()
               self.wavs[f] = sig
               sig = mfcc(y=sig, sr=rate)
-              sig = (sig - sig.mean()) / np.std(sig)
               self.wavsMfcc[f] = sig.T
             elif self.file_extension(f) == 'png':
               self.pngs = f
@@ -183,7 +182,7 @@ class Dataset:
           raise ValueError("Directory with train or(and) test samples does not exist")
 
     def __augment_data(self, data, filename, rate):
-      aug_data = self.perturbator.augment_data(data, rate)
+      aug_data = self.augmentor.augment_data(data, rate)
       aug_data = (aug_data - aug_data.mean()) / np.abs(aug_data).max()
       self.wavs[filename[:-4]+"-aug.wav"] = aug_data
       aug_data = mfcc(y=aug_data, sr=rate)

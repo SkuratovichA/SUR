@@ -19,32 +19,27 @@ import os
 from typing import Optional, Union
 
 import torchvision
-import torchvision.transforms as transforms
-import numpy as np
-import torch
-from torch import nn
-from torch.utils.data import DataLoader, random_split
-import pytorch_lightning as pl
-
-from torchmetrics import Accuracy
-
-from PIL import Image
 import PIL
-import imgaug as ia
-from imgaug import augmenters as iaa
-
 import tqdm
-import matplotlib.pyplot as plt
-import pandas as pd
-from torch.utils.data import Dataset
-
-from pprint import pprint
-
 import wandb
-
+import torch
+import numpy as np
+import imgaug as ia
+import pandas as pd
+from torch import nn
+from PIL import Image
+from pprint import pprint
+import pytorch_lightning as pl
+import matplotlib.pyplot as plt
+from torchmetrics import Accuracy
+from torch.utils.data import Dataset
+from imgaug import augmenters as iaa
+import torchvision.transforms as transforms
 from pytorch_lightning.loggers import WandbLogger
-from safe_gpu import safe_gpu
-gpu_owner = safe_gpu.GPUOwner(1)
+from torch.utils.data import DataLoader, random_split
+
+# from safe_gpu import safe_gpu
+# gpu_owner = safe_gpu.GPUOwner(0)
 
 import torch.nn.functional as F
 
@@ -110,6 +105,7 @@ class ImageTransform:
                 # transforms.Normalize(mean=[133.8628, 104.0229, 106.3728],
                                     #  std=[54.8065, 56.6426, 54.9152]),
             ])
+
     def __call__(self, img: Image.Image) -> torch.Tensor:
         return self.transform(img)
 

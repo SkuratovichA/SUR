@@ -23,13 +23,13 @@ python main.py mode=eval
 
 
 ## TODOS
-[x] image augmentations
-[x] audio augmentations
-[] make a file/class/something with BGMM training
-[] add requirements.txt
-[] train cnn classifier
-[] create eval pipeline. Probably add script for creation `.csv` files to train neural networks.
-[] create train pipeline
-[] test everything
-[] add more info on how to repeat the experiment
-[] start the next project
+- [x] image augmentations
+- [x] audio augmentations
+- [] make a file/class/something with BGMM training
+- [] add requirements.txt
+- [] train cnn classifier
+- [] create eval pipeline. Probably add script for creation `.csv` files to train neural networks.
+- [] create train pipeline
+- [] test everything
+- [] add more info on how to repeat the experiment
+- [] start the next project

@@ -1,11 +1,12 @@
 from glob import glob
+import yaml
 from classifiers import NeuralPCAClassifier, MAPClassifier, CNNClassifier
 import pytorch_lightning as pl
 pl.utilities.seed.seed_everything(42)
 
 
 def main(hparams):
-    dicts = {"NeuralPCA": NeuralPCAClassifier, "MAP": MAPClassifier, "CNN": CNNClassifier}
+    dicts = {"Neural_PCA": NeuralPCAClassifier, "MAP": MAPClassifier, "CNN": CNNClassifier}
 
     for key, classifier in dicts:
 
@@ -14,12 +15,12 @@ def main(hparams):
 
         if hparams[key]["eval"]:
             interface = classifier(train=False, hparams=hparams[key])
-            for file in glob(hparams["eval_dataset"]):
-                with open(f"{key}_predictions.txt", 'w') as f:
+            with open(f"{key}_predictions.txt", 'w') as f:
+                for file in glob(hparams["eval_dataset"]):
                     soft, hard = interface.predict(file)
                     print(f"{file} {soft:.2f} {hard}", file=f)
 
 
 # TODO: parse hyperpyyaml here
-hparams = {}
+hparams = yaml.safe_load('hp.yaml')
 main(hparams)

@@ -73,7 +73,6 @@ class Augmentor:
     '''
     noise = np.random.randn(len(data))
     return data + val*100 * noise
-    #augmented_data = augmented_data.astype(type(data[0])) tf is this?
 
 class VoiceActivityDetector:
 
@@ -87,7 +86,6 @@ class VoiceActivityDetector:
         self.VADn = 0.
         self.silence_counter = 0
 
-    # Voice Activity Detection
     def vad(self, _frame):
         frame = np.array(_frame) ** 2.
         result = True
@@ -105,32 +103,28 @@ class VoiceActivityDetector:
             result = False
         return result
 
-    # Push new audio samples into the buffer.
     def add_samples(self, data):
+		# Push new audio samples into the buffer
         self.buffer = np.append(self.buffer, data)
         result = len(self.buffer) >= self.buffer_size
         return result
 
-    # Pull a portion of the buffer to process
-    # (pulled samples are deleted after being
-    # processed
+    
     def get_frame(self):
         window = self.buffer[:self.buffer_size]
         self.buffer = self.buffer[self.step:]
         return window
-
-    # Adds new audio samples to the internal
-    # buffer and process them
+		
     def process(self, data):
         if self.add_samples(data):
             while len(self.buffer) >= self.buffer_size:
-                # Framing
-                window = self.get_frame()
+                window = self.get_frame() # Framing
                 if self.vad(window):  # speech frame
-                	self.out_buffer = np.append(self.out_buffer, window)
-
-    def get_voice_samples(self):
+                    self.out_buffer = np.append(self.out_buffer, window)
         return self.out_buffer
+
+    # def get_voice_samples(self):
+    #    return self.out_buffer
 
 class Dataset:
     def __init__(self, directories, extensions=None, aug = False):
@@ -143,7 +137,6 @@ class Dataset:
         """
         self.wavs = {}      # clear wavs
         self.wavsMfcc = {}  # mfcc wavs
-        self.nonCutWavs = {}
         self.pngs = {}
         self.samples = {}
         self.dirfilter = lambda x: os.path.splitext(os.path.basename(x))  # 'smth/honza.wav' -> ['honza', 'wav']
@@ -164,20 +157,23 @@ class Dataset:
           for f in fnames(directory):
             if self.file_extension(f) == 'wav':
               sig, rate = lb.load(f, sr=16000)
-              self.nonCutWavs[f] = sig
               assert rate == 16000, f"sample rate must be 16kHz, got {rate} for {f}"
+              
               sig = sig[26000:] # cut first 2 seconds
               VAD = VoiceActivityDetector()
-              VAD.process(sig) # cut silence
-              sig = VAD.get_voice_samples()
+              sig = VAD.process(sig) # cut silence
+              #sig = VAD.get_voice_samples()
+
               if aug: # augment 
                 self.__augment_data(sig, f, rate)
+
               sig = (sig - sig.mean()) / np.abs(sig).max()
               self.wavs[f] = sig
               sig = mfcc(y=sig, sr=rate)
               self.wavsMfcc[f] = sig.T
+
             elif self.file_extension(f) == 'png':
-              self.pngs = f
+              continue
         if not self.pngs or not self.wavs:
           raise ValueError("Directory with train or(and) test samples does not exist")
 
@@ -188,15 +184,11 @@ class Dataset:
       aug_data = mfcc(y=aug_data, sr=rate)
       self.wavsMfcc[filename[:-4]+"-aug.wav"] = aug_data.T
 
-
     def get_wavsMfcc(self):
         return np.vstack(list(self.wavsMfcc.values()))
 
     def get_wavs(self):
         return self.wavs
-
-    # def pngs(self):
-    #     return np.vstack(self.pngs.values())
 
 
 def main():

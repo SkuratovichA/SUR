@@ -1,3 +1,4 @@
+from msilib import _directories
 from dataset import Dataset
 import numpy as np
 import sklearn
@@ -17,49 +18,46 @@ import pickle
 
 class Classifier:
     
-    def __init__(self, target_train='../dataset/target_train', 
+    """ def __init__(self, target_train='../dataset/target_train', 
                     non_target_train='../dataset/non_target_train', 
                     target_dev='../dataset/target_dev', 
-                    non_target_dev='../dataset/non_target_dev'):
+                    non_target_dev='../dataset/non_target_dev'): """
+    def __init__(self, hparams):
+        self.hparams = hparams
         # train datasets
-        self.train_d = Dataset(directories=target_train, aug=True)
-        self.train_nd = Dataset(directories=non_target_train, aug=True)
-        # test datasets;
-        self.test_d = Dataset(directories=target_dev) 
-        self.test_nd = Dataset(directories=non_target_dev)
+        self.train_d = Dataset(directories=self.hparams["train_dir"]["target"], aug=True)
+        self.train_nd = Dataset(directories=self.hparams["train_dir"]["non_target"], aug=True)
+        #remove before eval
+        #self.eval = Dataset(directiories=self.hparams["eval_dataset"])
+        self.test_d = Dataset(directories=self.hparams["dev_dataset"]["target"]) 
+        self.test_nd = Dataset(directories=self.hparams["dev_dataset"]["non_target"])
 
         self.train_t = self.train_d.get_wavsMfcc()
         self.train_n = self.train_nd.get_wavsMfcc()
 
-        X_target = self.train_t
-        X_non_target = self.train_n
 
-        self.bgmm_target = BayesianGaussianMixture(n_components=7,  random_state=69, init_params='random', max_iter=2000).fit(X_target)
-        self.bgmm_non_target = BayesianGaussianMixture(n_components=9, random_state=42, init_params='random', max_iter=2000).fit(X_non_target)    
+    def train(self):
+        self.bgmm_target = BayesianGaussianMixture(n_components=9,  random_state=69, init_params='random', max_iter=2000).fit(self.train_t)
+        self.bgmm_non_target = BayesianGaussianMixture(n_components=11, random_state=42, init_params='random', max_iter=2000).fit(self.train_n)
 
-        self.evaluate()
-        #self.print_score()
-
-    def save(self, bgm_t_file = '../models/bgm_target_model.pkl', bgm_n_file = '../models/bgm_n_target_model.pkl'):
+    def save(self):
         ''' Save target bgmm model '''
-        with open(bgm_t_file, 'wb') as file:
+        with open(self.hparams["model_dir"] + '/' + self.hparams["model_name"]["target"], 'wb') as file:
             pickle.dump(self.bgmm_target, file)
         ''' Save non-target bgmm model '''
-        with open(bgm_n_file, 'wb') as file:
+        with open(self.hparams["model_dir"] + '/' + self.hparams["model_name"]["non_target"], 'wb') as file:
             pickle.dump(self.bgmm_non_target, file)
 
-    def load(self, bgm_t_file = '../models/bgm_target_model.pkl', bgm_n_file = '../models/bgm_n_target_model.pkl'):
+    def load(self):
         ''' Load target bgmm model '''
-        with open(bgm_t_file, 'rb') as file:
+        with open(self.hparams["model_dir"] + '/' + self.hparams["model_name"]["target"], 'rb') as file:
             self.bgmm_target = pickle.load(file)
         ''' Load target bgmm model '''
-        with open(bgm_n_file, 'rb') as file:
+        with open(self.hparams["model_dir"] + '/' + self.hparams["model_name"]["non_target"], 'rb') as file:
             self.bgmm_non_target = pickle.load(file)
 
     def print_res(self, scores, printMe=True):
         if printMe:
-            print("ONE CLASSIFIER FOR 2 DIFFERENT SETS")
-            print("MAP CLASSIFIER CLASSIFIES TARGET AND NON-TARGET")
             print("RESULTS ARE FOR TARGET SET AND NON TARGET SET ")
         ss = [("target", lambda x: x > 0) , ("non target", lambda x: x < 0)]
         def correctness(score, typ="", foo=None):
@@ -93,18 +91,13 @@ class Classifier:
         return maximize_me
 
     def evaluate(self):
-        
-        P_t, P_n = 0.5, 0.5
         # change test to some testdir 
         for _, test in enumerate(self.test_nd.wavsMfcc):
             ll_t = self.bgmm_target.score_samples(test)
             ll_n = self.bgmm_non_target.score_samples(test)
-            print(test.split(), ":", int(sum(ll_t) < sum(ll_n)), f"{(sum(ll_t) - sum(ll_n)):.2f}    {int((sum(ll_t) - sum(ll_n)) > 0)}")
+            print(test.split(), ":", int(sum(ll_t) < sum(ll_n)), f"{(sum(ll_t) - sum(ll_n)):.2f}    {int((sum(ll_t) - sum(ll_n)) > 0)}", file=self.hparams["eval_dir"]+"/"+self.params["eval_out"])
 
     def print_score(self):
-
-        P_t = 0.5
-        P_n = 1.0-P_t
 
         score_for_target_testset = []
         for tst in self.test_d.wavsMfcc.values(): # non target
@@ -116,16 +109,14 @@ class Classifier:
         for tst in self.test_nd.wavsMfcc.values(): # non target
             ll_t = self.bgmm_target.score_samples(tst) # target
             ll_n = self.bgmm_non_target.score_samples(tst) # non target
-            #print(int(sum(ll_t) < sum(ll_n)))
-            #print(f"{(sum(ll_t) - sum(ll_n)):.2f}    {int((sum(ll_t) - sum(ll_n)) > 0)}")
             score_for_non_target_testset.append(sum(ll_t) - sum(ll_n)) # prob target > prob non target
 
         self.print_res([score_for_target_testset, score_for_non_target_testset])
 
 
-def main():
+def main(hparams):
     
-    classifier = Classifier()
+    return Classifier(hparams)
 
 main()
 

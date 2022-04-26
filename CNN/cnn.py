@@ -7,40 +7,44 @@ Original file is located at
     https://colab.research.google.com/drive/1yHTdUbqT0af5aiUY5aDPd_csHIfIoxYz
 """
 
+import os
+os.environ["WANDB_MODE"]="offline"
 # Commented out IPython magic to ensure Python compatibility.
 # %%capture
-# !pip install -q pytorch_lightning wandb torchmetrics 
+# !pip install -q pytorch_lightning wandb torchmetrics
+# # ! pip install --quiet "ipython[notebook]" "torch>=1.6, <1.9" "pytorch-lightning>=1.4" "torchmetrics>=0.6" "torchvision"
+# # ! pip install cloud-tpu-client==0.10 https://storage.googleapis.com/tpu-pytorch/wheels/torch_xla-1.8-cp37-cp37m-linux_x86_64.whl
+# 
 # from google.colab import drive
 # drive.mount('/content/drive')
 # %cp -r "drive/MyDrive/SUR/SUR_projekt2021-2022"/* .
-# !pip install git+https://github.com/aleju/imgaug --yes
+# !pip install git+https://github.com/aleju/imgaug
+
+# %pip install cloud-tpu-client==0.10 https://storage.googleapis.com/tpu-pytorch/wheels/torch_xla-1.8-cp37-cp37m-linux_x86_64.whl
 
 import os
 from typing import Optional, Union
-
 import torchvision
-import PIL
-import tqdm
-import wandb
-import torch
-import numpy as np
-import imgaug as ia
-import pandas as pd
-from torch import nn
-from PIL import Image
-from pprint import pprint
-import pytorch_lightning as pl
-import matplotlib.pyplot as plt
-from torchmetrics import Accuracy
-from torch.utils.data import Dataset
-from imgaug import augmenters as iaa
 import torchvision.transforms as transforms
-from pytorch_lightning.loggers import WandbLogger
+import numpy as np
+import torch
+from torch import nn
 from torch.utils.data import DataLoader, random_split
-
-# from safe_gpu import safe_gpu
-# gpu_owner = safe_gpu.GPUOwner(0)
-
+import pytorch_lightning as pl
+from torchmetrics import Accuracy
+from PIL import Image
+import PIL
+import imgaug as ia
+from imgaug import augmenters as iaa
+import tqdm
+import matplotlib.pyplot as plt
+import pandas as pd
+from torch.utils.data import Dataset
+from pprint import pprint
+import wandb
+from pytorch_lightning.loggers import WandbLogger, TensorBoardLogger
+from safe_gpu import safe_gpu
+gpu_owner = safe_gpu.GPUOwner(1)
 import torch.nn.functional as F
 
 
@@ -72,16 +76,17 @@ class ImageTransform:
                     iaa.Resize((80,80)),
                     iaa.Sometimes(0.8, iaa.GaussianBlur(sigma=(0,2.0))),
                     iaa.Fliplr(0.9),
-                    iaa.Sometimes(0.8, iaa.Affine(rotate=(-65,65), mode='edge')),
+                    iaa.Sometimes(0.9, iaa.Affine(rotate=(-65,65), mode='edge')),
                     iaa.Sometimes(0.8, iaa.PerspectiveTransform(scale=(0.0, 0.10))),
-                    iaa.Sometimes(0.8, iaa.AddToHueAndSaturation(value=(-20,20), per_channel=True)),
+                    iaa.Sometimes(0.9, iaa.AddToHueAndSaturation(value=(-20,20), per_channel=True)),
                     iaa.Sometimes(0.8, iaa.blend.Alpha((0.0, 1.0), first=iaa.Add(20), second=iaa.Multiply(0.6))),
                     iaa.Sometimes(0.1, iaa.SomeOf((0, 2), [
                         iaa.Sharpen(alpha=(0, 0.7), lightness=(0.75, 1.5)), # sharpen images
                         iaa.Emboss(alpha=(0, 0.7), strength=(0, .5)), # emboss images
-                ]))]).augment_image,
+                    ]))]).augment_image,
                 np.ascontiguousarray,
                 transforms.ToTensor(),
+                transforms.Grayscale(num_output_channels=1)
                 # transforms.Normalize(mean=[133.8628, 104.0229, 106.3728],
                                     #  std=[54.8065, 56.6426, 54.9152]),
             ])
@@ -102,10 +107,10 @@ class ImageTransform:
                 ]).augment_image,
                 np.ascontiguousarray,
                 transforms.ToTensor(),
+                transforms.Grayscale(num_output_channels=1)
                 # transforms.Normalize(mean=[133.8628, 104.0229, 106.3728],
                                     #  std=[54.8065, 56.6426, 54.9152]),
             ])
-
     def __call__(self, img: Image.Image) -> torch.Tensor:
         return self.transform(img)
 
@@ -116,8 +121,8 @@ class SmallDataset(pl.LightningDataModule):
         self.root_dir = root_dir
         self.batch_size = batch_size
         self.num_workers=1
-        self.train_dataset = SURDataset(root_dir=root_dir, csv='train_cnn.csv', transform=ImageTransform(is_train=True))
-        self.val_dataset = SURDataset(root_dir=root_dir, csv='dev_cnn.csv', transform=ImageTransform(is_train=False))
+        self.train_dataset = SURDataset(root_dir=root_dir, csv='train1.csv', transform=ImageTransform(is_train=True))
+        self.val_dataset = SURDataset(root_dir=root_dir, csv='dev1.csv', transform=ImageTransform(is_train=False))
         self.classes = 1
     
     def train_dataloader(self) -> DataLoader:
@@ -128,59 +133,51 @@ class SmallDataset(pl.LightningDataModule):
         dataloader = DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, drop_last=False)
         return dataloader
 
+# %cp "drive/MyDrive/SUR/SUR_projekt2021-2022"/*.csv .
 
-
-
-
-
-
-
-
-pl.utilities.seed.seed_everything(42)
-import wandb
-wandb.login()
+# pl.utilities.seed.seed_everything(42)
+#import wandb
+#wandb.login()
 
 class VeriOverFit(pl.LightningModule):
     def __init__(self):
-        self.save_hyperparameters()
+        #self.save_hyperparameters()
         super().__init__()
-        self.activ = nn.CELU()
-        self.non_lin_activ = nn.GELU()
-
-        self.model = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size = 3, padding = 1),
-            nn.BatchNorm2d(num_features=32),
-            self.activ,
-            nn.Conv2d(32, 32, kernel_size = 3, stride = 1, padding = 1),
-            nn.BatchNorm2d(num_features=32),
-            self.activ,
-            nn.Conv2d(32, 16, kernel_size = 3, stride = 1, padding =1),
-            nn.BatchNorm2d(num_features=16),
-            self.activ,
-            nn.MaxPool2d(2, 2), # h: 40
+        self.linear = nn.ReLU()
+        self.activ = nn.GELU()
         
-            nn.Conv2d(16, 16, kernel_size = 3, padding = 1),
-            nn.BatchNorm2d(num_features=16),
-            self.activ,
-            nn.Conv2d(16, 8, kernel_size = 3, stride = 1, padding = 1),
-            nn.BatchNorm2d(num_features=8),
-            self.activ,
-            nn.Conv2d(8, 4, kernel_size = 3, stride = 1, padding =1),
-            nn.BatchNorm2d(num_features=4),
-            self.activ,
-            nn.MaxPool2d(2, 2), # h: 40
-            
-            nn.Flatten(),
-            nn.Linear(1600, 512), # ??? 80*80*1 ?
-            self.non_lin_activ,
-            nn.Linear(512, 64), # ??? 80*80*1 ?
-            self.non_lin_activ,
-            nn.Linear(64, 1),
-            nn.Sigmoid(),
-            # nn.Dropout2d(p=dropout) 0.1
+        self.model = nn.Sequential(
+                                
+           nn.Dropout(0.01), # self-augmentation
+
+           nn.Conv2d(1, 8, kernel_size = 5, padding = 3), self.activ,
+           nn.MaxPool2d(2, 2),
+           nn.BatchNorm2d(num_features=8),
+           nn.Dropout(0.1),
+                                                                                                        
+           nn.Conv2d(8, 16, kernel_size = 3, padding = 1), self.activ,
+           nn.MaxPool2d(2, 2),
+           nn.BatchNorm2d(num_features=16),
+           nn.Dropout(0.3),
+
+           nn.Conv2d(16, 32, kernel_size = 3, padding = 1), self.activ,
+           nn.MaxPool2d(2, 2),
+           nn.BatchNorm2d(num_features=32),
+           nn.Dropout(0.4),
+
+           nn.Conv2d(32, 64, kernel_size = 3, padding = 1), self.activ,
+           nn.MaxPool2d(2, 2),
+           nn.BatchNorm2d(num_features=64),
+           nn.Dropout(0.4),
+
+
+           nn.Flatten(),
+           nn.BatchNorm1d(num_features=1600),
+           nn.Linear(1600, 128), nn.GELU(),
+           nn.Linear(128, 1), nn.Sigmoid()
         )
 
-        self.loss = torch.nn.BCEWithLogitsLoss()
+        self.loss = torch.nn.BCELoss()
         self.accuracy = Accuracy()
 
     def forward(self, x):
@@ -217,24 +214,23 @@ class VeriOverFit(pl.LightningModule):
         acc = self.accuracy(preds, y)
 
         return preds, loss, acc
-    
-    def conv_block(self, c_in, c_out, dropout, **kwargs):
-        seq_block = nn.Sequential(
-            nn.Conv2d(in_channels=c_in, out_channels=c_out, **kwargs),
-            nn.BatchNorm2d(num_features=c_out),
-            nn.GELU(),
-            nn.Dropout2d(p=dropout)
-        )
-        return seq_block
 
     def configure_optimizers(self):
-        optimizer = torch.optim.RMSprop(self.parameters(), lr=0.0001, weight_decay=0.001, momentum=0.3) # the best?
+        optimizer = torch.optim.RMSprop(self.parameters(), lr=0.000001, weight_decay=0.001, momentum=0.99) # the best?
+
+        #optimizer = torch.optim.RMSprop(self.parameters(), lr=0.00001, weight_decay=0.0001, momentum=0.99) # the best?
+        # optimizer = torch.optim.Adam(self.parameters(), lr=0.001, weight_decay=0.0001, amsgrad=True) # the best?
+        #optimizer = torch.optim.Adadelta(self.parameters(), lr=1, weight_decay=0.0) # the best?
+        #optimizer = torch.optim.SGD(self.parameters(), lr=0.000001, weight_decay=0.001, nesterov=True, momentum=0.9) # the best?
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode='max',
-            factor=0.999,
-            patience=5,
-            threshold=1e-15)
+            factor=0.8,
+            patience=1,
+            threshold=0.0001,
+            min_lr=0.000001,
+            verbose=True
+            )
         lr_scheduler_config = {
             'scheduler': scheduler,
             'monitor': 'val loss',
@@ -245,17 +241,28 @@ class VeriOverFit(pl.LightningModule):
 
 
 
-wandb_logger = WandbLogger(log_model='all', name='RMSprop2', project="pytorch_lightning_test", offline=True)
 
+eval = False
 from pytorch_lightning.callbacks import Callback
+name = "decayed1.pt"
+if not eval:
+    print("creating wandb logger")
+    logger = TensorBoardLogger('tb_logs', name='cnn')
+    #logger = WandbLogger(offline=True, name=name, project="cnn", save_dir='wandb')
+    print("wandb logger created")
+    
  
 class LogPredictionsCallback(Callback):
+
     def on_validation_batch_end(
         self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
         """Called when the validation batch ends."""
 
+        if np.random.randint(low=0, high=10) != 7:
+            return
+
         if batch_idx == np.random.randint(low=0, high=batch_idx+1):
-            n = 20
+            n = 5
             x, y = batch
             images = [img for img in x[:n]]
 
@@ -267,19 +274,19 @@ class LogPredictionsCallback(Callback):
             # Option 2: log predictions as a Table
             columns = ['image', 'ground truth', 'prediction']
             data = [[wandb.Image(x_i), y_i, y_pred] for x_i, y_i, y_pred in list(zip(x[:n], y[:n], outputs[:n]))]
-            wandb_logger.log_table(key='sample_table', columns=columns, data=data)
+            logger.log_table(key='sample_table', columns=columns, data=data)
 
 # log_predictions_callback = LogPredictionsCallback()
 
-def get_basic_callbacks(checkpoint_interval: int=1) -> list:
+def get_basic_callbacks(checkpoint_interval: int=10) -> list:
     lr_callback = pl.callbacks.LearningRateMonitor(logging_interval='epoch')
     ckpt_callback = pl.callbacks.ModelCheckpoint(filename='epoch{epoch:03d}',
                                     auto_insert_metric_name=False,
                                     save_top_k=1,
                                     every_n_epochs=checkpoint_interval)
-    prediction_callback = LogPredictionsCallback()
+    #prediction_callback = LogPredictionsCallback()
     
-    return [ckpt_callback, lr_callback, prediction_callback]
+    return [ckpt_callback, lr_callback] #, prediction_callback]
 
 
 def test_saving(model):
@@ -291,29 +298,30 @@ def test_saving(model):
     test_model.eval()
 
 def main():
-
-    MODELNAME = 'SmalloverfittedStupidModel1'
-    eval = False
-    name = "OverFitDumbass_RAdam.pt"
+    
 
     if not eval:
-        data = SmallDataset(root_dir='.', batch_size=32)
+        data = SmallDataset(root_dir='.', batch_size=4)
         model = VeriOverFit()
-        wandb_logger.watch(model)
+        print("1")
+        #logger.watch(model)
+        print("2")
         trainer = pl.Trainer(
-            max_epochs=100,
+            max_epochs=1000,
             callbacks=get_basic_callbacks(),
             default_root_dir='.',
-            gpus=0,
-            strategy=None,
+            gpus=1,
+            #accelerator=,
+            #devices=1,
             num_sanity_val_steps=1,
-            log_every_n_steps=10,
-            logger=wandb_logger
+            log_every_n_steps=6,
+            logger=logger
         )
+        print("3")
         trainer.fit(model, data)
         print(f"Saving model: {name}")
         torch.save(model.state_dict(), name)
-        wandb.finish()
+        #wandb.finish()
     else:
         print("Loading model")
         model = VeriOverFit()
@@ -323,12 +331,3 @@ def main():
         # eval_model(lambda model, input: model(input), model)
 
 main()
-
-# ## saving (test)
-# torch.save(model.state_dict(), "OverFitDumbass.pt")
-# test_model = VeriOverFit()
-# test_model.load_state_dict(
-#     torch.load("OverFitDumbass.pt")
-# )
-# test_model.eval()
-

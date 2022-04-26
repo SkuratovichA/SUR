@@ -2,15 +2,6 @@
 from wandb import wandb
 
 
-zaebalsya = PCA_dataset('.')
-IN_FEATURES = zaebalsya.get_input_shape()
-print(IN_FEATURES)
-
-eval = False
-name = "PCA_NN_dev_and_train.pt"
-EPOCHS = 350
-
-
 import torch
 from torchmetrics import Accuracy
 from pytorch_lightning.loggers import WandbLogger
@@ -28,6 +19,7 @@ import os
 import pandas as pd
 
 import pytorch_lightning as pl
+from safe_gpu import safe_gpu
 
 # TODO: move to main
 gpu_owner = safe_gpu.GPUOwner(1)
@@ -126,8 +118,8 @@ class PCA_dataset(pl.LightningDataModule):
             d_U = torch.tensor((datas.numpy() - mean.numpy()).dot(U.T.numpy()))
             return d_U
         
-        train_d, train_l = get_images('train.csv', is_train=True)
-        val_d, val_l = get_images('dev.csv', is_train=False)
+        train_d, train_l = get_images('train1.csv', is_train=True)
+        val_d, val_l = get_images('dev1.csv', is_train=False)
         self.shape = len(train_d)
         
         V, S, U = torch.linalg.svd(train_d, full_matrices=False)
@@ -240,6 +232,14 @@ def get_basic_callbacks(checkpoint_interval: int=1) -> list:
     
     return [ckpt_callback, lr_callback]
 
+zaebalsya = PCA_dataset('.')
+IN_FEATURES = zaebalsya.get_input_shape()
+print(IN_FEATURES)
+
+eval = False
+name = "PCA_NN_dev_and_train.pt"
+EPOCHS = 350
+
 
 def main():
 
@@ -270,4 +270,5 @@ def main():
         model.load_state_dict(torch.load(name))
         model.eval()
         print("model is ready!?")
+
 main()

@@ -171,7 +171,6 @@ class Dataset:
               self.wavs[f] = sig
               sig = mfcc(y=sig, sr=rate)
               self.wavsMfcc[f] = sig.T
-
             elif self.file_extension(f) == 'png':
               continue
         if not self.pngs or not self.wavs:

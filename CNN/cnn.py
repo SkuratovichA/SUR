@@ -17,6 +17,8 @@ from pytorch_lightning.callbacks import Callback
 
 from safe_gpu import safe_gpu
 
+
+# TODO: move to main
 NUM_GPUS = 1 if torch.cuda.is_available else 0
 gpu_owner = safe_gpu.GPUOwner(NUM_GPUS)
 
@@ -103,12 +105,6 @@ class SmallDataset(pl.LightningDataModule):
         return dataloader
 
 
-pl.utilities.seed.seed_everything(42)
-
-
-# import wandb
-# wandb.login()
-
 class CNNKyticko(pl.LightningModule):
     def __init__(self):
         # self.save_hyperparameters() # if wandb logger, uncomment?
@@ -178,8 +174,10 @@ class CNNKyticko(pl.LightningModule):
         return preds, loss, acc
 
     def configure_optimizers(self):
+##
+        #optimizer = torch.optim.RMSprop(self.parameters(), lr=0.00000008, weight_decay=0.00156, momentum=0.999) # the best?
+##
         optimizer = torch.optim.RMSprop(self.parameters(), lr=0.000001, weight_decay=0.001, momentum=0.99)
-
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode='max',

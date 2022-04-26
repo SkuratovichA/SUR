@@ -1,17 +1,6 @@
 from dataset import Dataset
 import numpy as np
-import sklearn
-from sklearn.mixture import GaussianMixture
-from numpy.random import randint
-from ikrlib import train_gmm, logpdf_gmm
-from tqdm.notebook import trange, tqdm
 from numpy import sum
-import torch
-import matplotlib.pyplot as plt
-import IPython.display as ipd
-from IPython.display import Audio
-#!pip install speechbrain
-import speechbrain as sb
 from sklearn.mixture import BayesianGaussianMixture
 import pickle
 

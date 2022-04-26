@@ -1,6 +1,8 @@
 import torch
 import CNN.cnn
 from CNN.cnn import CNNKyticko
+import NEURAL_PCA
+from NEURAL_PCA.neural_pca import NeuralPCA, PCA_dataset
 import logging
 from PIL import Image
 import numpy as np
@@ -35,14 +37,16 @@ class Classifier:
 class NeuralPCAClassifier(Classifier):
     def __init__(self, train, hparams):
         super(NeuralPCAClassifier).__init__(train, hparams)
+        self.data = PCA_dataset(root_dir=hparams["root_dir"], batch_size=16)
+        U, mean = self.data.get_U_mean()
+        if self.train:
+            pass
+        else:
+            pass
 
     def predict(self, filename, hparams):
-        pass
-
-    def train(self, hparams):
-        pass
-
-    def save(self, save_path):
+        # todo: transform an image
+        # todo: normalize (as pca does) the image
         pass
 
 

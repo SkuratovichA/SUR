@@ -38,36 +38,24 @@ name = "PCA_NN_dev_and_train.pt"
 EPOCHS = 350
 
 
-
 import torch
-from torch.utils.data import DataLoader, random_split
 from torchmetrics import Accuracy
 from pytorch_lightning.loggers import WandbLogger
 
 import numpy as np
-from skimage import io
 import torch.nn as nn
-import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 
-import torchvision
 import torchvision.transforms as transforms
-import PIL
 from PIL import Image
 import wandb
 from imgaug import augmenters as iaa
-import imgaug as ia
-import matplotlib.pyplot as plt
 import os
 import pandas as pd
-from skimage import io
 
 import pytorch_lightning as pl
 
-# %matplotlib inline
-
-pl.utilities.seed.seed_everything(42)
 
 
 class ImageTransform:

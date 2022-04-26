@@ -1,6 +1,7 @@
 from glob import glob
 from classifiers import NeuralPCAClassifier, MAPClassifier, CNNClassifier
-
+import pytorch_lightning as pl
+pl.utilities.seed.seed_everything(42)
 
 
 def main(hparams):

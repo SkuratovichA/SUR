@@ -10,13 +10,13 @@ def main(hparams):
 
         if hparams[key]["train"]:
             interface = classifier(train=True, hparams=hparams[key])
-            interface.train(hparams)
-            interface.save(hparams[key][f"{key}_path"])
+            interface.train()
+            interface.save()
 
         if hparams[key]["eval"]:
             interface = classifier(train=False, hparams=hparams[key])
             for file in glob(hparams["eval_dataset"]):
-                soft, hard = interface.predict(file, hparams)
+                soft, hard = interface.predict(file)
                 print(f"{file}  {soft:.2f}  {hard}", file=file)
 
 

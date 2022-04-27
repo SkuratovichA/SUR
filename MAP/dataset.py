@@ -1,5 +1,5 @@
 # File: dataset.py
-# Author: Maksim Tikhonov <xtikho00@vutbr.cz>
+# Author: Tikhonov Maksim <xtikho00@vutbr.cz>
 # Date: 27.4.2022, 3.42 AM
 
 import os

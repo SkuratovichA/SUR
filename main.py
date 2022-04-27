@@ -1,6 +1,7 @@
-# File:
-# Author(s):
-# Date: 
+# File: main.py
+# Authors: Skuratovich Aliaksandr <xskura01@vutbr.cz>, Tikhonov Maksim <xtikho00@vutbr.cz>
+# Date: 27.4.2022, 3.42 AM
+
 
 from glob import glob
 import yaml

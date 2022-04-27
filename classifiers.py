@@ -1,7 +1,6 @@
 # File: classifiers.py
-# Author(s):
-# Date:
-
+# Authors: Skuratovich Aliaksandr <xskura01@vutbr.cz>, Tikhonov Maksim <xtikho00@vutbr.cz>
+# Date: 27.4.2022, 3.42 AM
 
 import os
 import torch

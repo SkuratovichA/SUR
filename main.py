@@ -1,3 +1,7 @@
+# File:
+# Author(s):
+# Date: 
+
 from glob import glob
 import yaml
 from classifiers import NeuralPCAClassifier, MAPClassifier, CNNClassifier

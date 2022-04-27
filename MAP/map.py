@@ -1,4 +1,7 @@
-#from dataset import Dataset
+# File: map.py
+# Author: Maksim Tikhonov <xtikho00@vutbr.cz>
+# Date: 27.4.2022, 3.42 AM
+
 import dataset as data
 import numpy as np
 from numpy import sum

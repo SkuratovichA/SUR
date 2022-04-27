@@ -1,3 +1,8 @@
+# File: classifiers.py
+# Author(s):
+# Date:
+
+
 import os
 import torch
 import CNN.cnn

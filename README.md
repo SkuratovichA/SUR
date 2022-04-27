@@ -41,6 +41,6 @@ The implementations of three classifiers are in three corresponding folders - ``
 - [x] train cnn classifier
 - [x] create eval pipeline. Probably add script for creation `.csv` files to train neural networks.
 - [x] create train pipeline
-- [ ] test everything
-- [ ] add more info on how to repeat the experiment
-- [ ] start the next project
+- [x] test everything
+- [x] add more info on how to repeat the experiment
+- [ ] start the next school project :-(

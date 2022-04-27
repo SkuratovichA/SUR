@@ -25,7 +25,6 @@ def main(hparams):
 with open("hp.yaml", 'r') as stream:
     hparams = yaml.safe_load(stream)
 
-#print("ZDES':", hparams)
 """ hparams = {
     "CNN": {"train" : False,
             "eval" : False},

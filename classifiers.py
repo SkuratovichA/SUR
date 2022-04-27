@@ -58,7 +58,7 @@ class MAPClassifier(Classifier):
         if self.hparams["eval"]:
             self.model.load()
 
-    def predict(self, filename)
+    def predict(self, filename):
         soft, hard = self.model.evaluate(filename)
 
 
@@ -66,31 +66,27 @@ class CNNClassifier(Classifier):
     def __init__(self, hparams):
         super(CNNClassifier).__init__(hparams)
 
-        # train and store the model
+        # train and save the model
         if self.hparams["train"]:
             CNN.cnn.main(self.hparams)
 
-        # load and test model
+        # load the trained model
         if self.hparams["eval"]:
             path = os.path.join(self.hparams['model_dir'], self.hparams['model_name'])
             logger.debug(f"Loading model from {path}...")
             self.model = CNNKyticko()
             # load a model (in models/<name>)
-            self.model.load_state_dict(torch.load(path))
+            self.model.load_state_dict(torch.load(path, map_location=torch.device('cpu')))
             self.model.eval()
             logger.debug("Model has been loaded successfully")
 
     def predict(self, filename):
-        image = Image.open(filename)
-        # load an image & transform to a tensor + convert to grayscale
         transform = transforms.Compose([
-                np.ascontiguousarray,
-                transforms.ToTensor(),
-                transforms.Grayscale(num_output_channels=1)
+            transforms.ToTensor(),
+            transforms.Grayscale(num_output_channels=1)
         ])
-        image = np.array(image)
-        image = transform(image)
-        soft = self.model(image)
+        image = transform(np.array(Image.open(filename))).unsqueeze(0)
+        soft = self.model(image).detach().ravel()[0]
 
         # soft, hard decision
-        return soft.ravel().numpy()[0], int(bool(soft.ravel().numpy()[0] > .5))
+        return soft.ravel().numpy()[0], int(soft > .5)

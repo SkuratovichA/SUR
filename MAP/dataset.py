@@ -27,7 +27,7 @@ class Augmentor:
     except:
 
       if _id < 5:
-        aug_data, speed_up = self.__change_speed(data, sr)
+        aug_data = self.__change_speed(data, sr)
       else: 
         aug_data = self.__add_noise(data, val)
 
@@ -89,7 +89,7 @@ class VoiceActivityDetector:
     def vad(self, _frame):
         frame = np.array(_frame) ** 2.
         result = True
-        threshold = 0.1 # adaptive threshold
+        threshold = 0.08 # adaptive threshold
         thd = np.min(frame) + np.ptp(frame) * threshold
         self.VADthd = (self.VADn * self.VADthd + thd) / float(self.VADn + 1.)
         self.VADn += 1.
@@ -127,7 +127,7 @@ class VoiceActivityDetector:
     #    return self.out_buffer
 
 class Dataset:
-    def __init__(self, directories, extensions=None, aug = False):
+    def __init__(self, directories, extensions=None, aug=False):
         r"""
         Creates a dataset files in specified directories.
 
@@ -135,7 +135,7 @@ class Dataset:
         :param extensions: one of 'wav', 'png'. If None, both are included.
         :return: dictionary of type {'<person id>' : {'png' : filename.png, 'wav' : filename.wav}}
         """
-        self.wavs = {}      # clear wavs
+        #self.wavs = {}      # clear wavs
         self.wavsMfcc = {}  # mfcc wavs
         self.pngs = {}
         self.samples = {}
@@ -162,37 +162,35 @@ class Dataset:
               sig = sig[26000:] # cut first 2 seconds
               VAD = VoiceActivityDetector()
               sig = VAD.process(sig) # cut silence
-              #sig = VAD.get_voice_samples()
 
               if aug: # augment 
                 self.__augment_data(sig, f, rate)
 
               sig = (sig - sig.mean()) / np.abs(sig).max()
-              self.wavs[f] = sig
+              #self.wavs[f] = sig
               sig = mfcc(y=sig, sr=rate)
               self.wavsMfcc[f] = sig.T
             elif self.file_extension(f) == 'png':
               continue
-        if not self.pngs or not self.wavs:
-          raise ValueError("Directory with train or(and) test samples does not exist")
+        #if not self.pngs or not self.wavsMfcc :
+        #  raise ValueError("Directory with train or(and) test samples does not exist")
 
     def __augment_data(self, data, filename, rate):
       aug_data = self.augmentor.augment_data(data, rate)
       aug_data = (aug_data - aug_data.mean()) / np.abs(aug_data).max()
-      self.wavs[filename[:-4]+"-aug.wav"] = aug_data
+      #self.wavs[filename[:-4]+"-aug.wav"] = aug_data
       aug_data = mfcc(y=aug_data, sr=rate)
       self.wavsMfcc[filename[:-4]+"-aug.wav"] = aug_data.T
 
     def get_wavsMfcc(self):
         return np.vstack(list(self.wavsMfcc.values()))
 
-    def get_wavs(self):
-        return self.wavs
+    #def get_wavs(self):
+    #    return self.wavs
 
 
 def main():
     dataset = Dataset(['target_dev', 'target_train'])
-    print(len(dataset.wavsMfcc))
 
 
 if __name__ == "__main__":

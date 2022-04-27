@@ -22,6 +22,7 @@ logger.addHandler(stream_handler)
 
 pl.utilities.seed.seed_everything(42)
 
+
 def main(hparams):
     dicts = {"Neural_PCA": [NeuralPCAClassifier, '.png'], "MAP": [MAPClassifier, '.wav'], "CNN": [CNNClassifier, 'png']}
 

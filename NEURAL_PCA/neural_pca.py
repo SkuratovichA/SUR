@@ -291,8 +291,8 @@ def main(hparams):
         ])
         image = (convert_pil_to_tensor_and_transform(img_path, transform))  # numpy form
         image = torch.tensor((image - mean).dot(u.T)).unsqueeze(0)
-        print(f"for {img_path}")
-        print(f"Score: {model(image).detach().ravel()[0]}")
+        logger.debug(f"for {img_path}")
+        logger.debug(f"Score: {model(image).detach().ravel()[0]}")
 
 
 if __name__ == "__main__":
@@ -311,4 +311,3 @@ if __name__ == "__main__":
         hparams["GPU"] = 1
 
     main(hparams)
-

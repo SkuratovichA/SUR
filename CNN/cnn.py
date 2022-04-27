@@ -157,7 +157,6 @@ class CNNKyticko(pl.LightningModule):
         self.accuracy = Accuracy()
 
     def forward(self, x):
-        print("x.shape: ", x.shape)
         x = self.model(x)
         return x
 
@@ -285,7 +284,7 @@ def main(hparams):
         ])
         image = transform(np.array(Image.open(img_path))).unsqueeze(0)
 
-        print(f"Score: {model(image).detach().ravel()[0]}")
+        logger.debug(f"Score: {model(image).detach().ravel()[0]}")
 
 
 if __name__ == "__main__":

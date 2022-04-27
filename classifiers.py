@@ -17,7 +17,7 @@ formatter = logging.Formatter('(%(levelname)s): %(funcName)s:%(lineno)d %(messag
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
-#logger.disabled = True
+logger.disabled = True
 
 
 class Classifier:

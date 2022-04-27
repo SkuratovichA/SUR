@@ -23,25 +23,21 @@ class Classifier:
         #self.eval = data.Dataset(directiories=self.hparams["eval_dataset"])
         self.test_d = Dataset(directories=self.hparams["dev_dataset"]["target"]) 
         self.test_nd = Dataset(directories=self.hparams["dev_dataset"]["non_target"])
-        if hparams["train"]:
-            self.train_t = self.train_d.get_wavsMfcc()
-            self.train_n = self.train_nd.get_wavsMfcc()
-            print("TRAINING...")
-            self.train()
-        else:
-            self.load()
-        print("EVALUATING...")
-        self.evaluateIter()
-        print("SAVING...")
-        self.save()
+        #if hparams["train"]:
+        self.train_t = self.train_d.get_wavsMfcc()
+        self.train_n = self.train_nd.get_wavsMfcc()
+            #self.train()
+        #else:
+            #self.load()
 
     def train(self):
+        print("TRAINING GMM...")
         self.bgmm_target = BayesianGaussianMixture(n_components=1,  random_state=69, init_params='random', max_iter=2000).fit(self.train_t)
         self.bgmm_non_target = BayesianGaussianMixture(n_components=1, random_state=42, init_params='random', max_iter=2000).fit(self.train_n)
 
     def save(self):
         ''' Save target bgmm model '''
-        
+        print("SAVING GMM...")
         with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["target"]), 'wb') as file:
             pickle.dump(self.bgmm_target, file)
         ''' Save non-target bgmm model '''
@@ -50,10 +46,11 @@ class Classifier:
 
     def load(self):
         ''' Load target bgmm model '''
-        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["non_target"]), 'rb') as file:
+        print("LOADING GMM...")
+        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["target"]), 'rb') as file:
             self.bgmm_target = pickle.load(file)
         ''' Load target bgmm model '''
-        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["target"]), 'rb') as file:
+        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["non_target"]), 'rb') as file:
             self.bgmm_non_target = pickle.load(file)
 
     def print_res(self, scores, printMe=True):
@@ -97,7 +94,6 @@ class Classifier:
 
     def evaluateIter(self):
         # change test to some testdir
-        print(self.test_d.wavsMfcc)
         for testname, wav in self.test_nd.wavsMfcc.items():
             ll_t = self.bgmm_target.score_samples(self.test_nd.wavsMfcc[testname])
             ll_n = self.bgmm_non_target.score_samples(self.test_nd.wavsMfcc[testname])

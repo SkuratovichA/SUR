@@ -10,11 +10,12 @@ def main(hparams):
 
     for key, classifier in dicts.items():
         classifier, file_format = classifier
-        if hparams[key]["train"]:
-            interface = classifier(hparams=hparams[key])
+        interface = classifier(hparams=hparams[key])
+        
+        #if hparams[key]["train"]:
+        #    interface = classifier(hparams=hparams[key])
 
         if hparams[key]["eval"]:
-            interface = classifier(hparams=hparams[key])
             with open(f"{key}_predictions.txt", 'w') as f:
                 for file in glob(f"{hparams['eval_dataset']}/*{file_format}"):
                     soft, hard = interface.predict(file)

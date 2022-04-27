@@ -57,6 +57,7 @@ class NeuralPCAClassifier(Classifier):
 
 class MAPClassifier(Classifier):
     def __init__(self, hparams):
+        print("INIT MAP CLASSIFIER")
         super().__init__(hparams)
         self.model = MAP.map.main(hparams)
         # train model and store it

@@ -11,12 +11,15 @@ default: &default
 
 CNN:
   <<: *default
+  train: False
+  eval: False
   model_name: CNNKyticko.pt
   eval_out: cnn_out.txt
 
 MAP:
   <<: *default
-  
+  train: True
+  eval: True
   dataset_dir: {non_target: ./dataset/non_target_train, target: ./dataset/target_train}
   model_name: {target: bgmm_target.pkl, non_target: bgmm_non_target.pkl}
   dev_dataset: {non_target: ./dataset/non_target_dev, target: ./dataset/target_dev}
@@ -24,5 +27,7 @@ MAP:
 
 Neural_PCA:
   <<: *default
+  train: False
+  eval: False
   model_name: NeuralPCA.pt
   eval_out: Neural_PCA_out.txt

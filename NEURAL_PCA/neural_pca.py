@@ -2,6 +2,8 @@
 # Author: Skuratovich Aliaksandr <xskura01@vutbr.cz>
 # Date: 27.4.2022, 3.46 AM
 
+from safe_gpu import safe_gpu
+gpu_owner = safe_gpu.GPUOwner(1)
 
 import os
 import torch
@@ -26,8 +28,8 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-DEBUG = True
-EPOCHS = 1 if DEBUG else 350
+DEBUG = False
+EPOCHS = 1 if DEBUG else 1000
 logger.disabled = not DEBUG
 
 
@@ -50,9 +52,8 @@ class ImageTransform:
                 iaa.Sequential([
                     iaa.Resize((80, 80)),
                     iaa.Sometimes(0.8, iaa.GaussianBlur(sigma=(0, 2.0))),
-                    iaa.Sometimes(0.8, iaa.PerspectiveTransform(scale=(0.0, 0.06))),
+                    iaa.Sometimes(0.8, iaa.PerspectiveTransform(scale=(0.0, 0.03))),
                     iaa.Fliplr(0.8),
-                    iaa.Sometimes(0.5, iaa.Affine(rotate=(-3, 3), mode='edge')),
                     iaa.Sometimes(0.8, iaa.AddToHueAndSaturation(value=(-10, 10), per_channel=True)),
                     iaa.Sometimes(0.2,
                                   iaa.blend.Alpha((0.0, 1.0), first=iaa.Add(20), second=iaa.Multiply(0.6))
@@ -66,7 +67,7 @@ class ImageTransform:
             self.transform = transforms.Compose([
                 iaa.Sequential([
                     iaa.Resize((80, 80)),
-                    iaa.Sometimes(0.1, iaa.PerspectiveTransform(scale=(0.0, 0.03))),
+                    iaa.Sometimes(0.1, iaa.PerspectiveTransform(scale=(0.0, 0.02))),
                     iaa.Sometimes(0.1, iaa.GaussianBlur(sigma=(0, 3.0))),
                     iaa.Sometimes(0.1, iaa.AddToHueAndSaturation(value=(-20, 20), per_channel=True)),
                     iaa.Sometimes(0.1,
@@ -154,15 +155,16 @@ class PCADataset(pl.LightningDataModule):
 
 class NeuralPCA(pl.LightningModule):
     def __init__(self):
-        self.save_hyperparameters()
+        #self.save_hyperparameters()
         super().__init__()
         self.activ = nn.Sigmoid()
         self.activ2 = nn.GELU()  # I LOVE GELU. (4.22 AM)
 
+        IN_SHAPE = 239
         self.model = nn.Sequential(
-            nn.BatchNorm1d(num_features=719),  # normalize input features
+            nn.BatchNorm1d(num_features=IN_SHAPE),  # normalize input features
 
-            nn.Linear(in_features=719, out_features=32),
+            nn.Linear(in_features=IN_SHAPE, out_features=32),
             self.activ,
 
             nn.Linear(in_features=32, out_features=1),
@@ -205,7 +207,7 @@ class NeuralPCA(pl.LightningModule):
         return seq_block
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.00009, weight_decay=0.0001, amsgrad=True)  # the best?
+        optimizer = torch.optim.Adam(self.parameters(), lr=0.00009, weight_decay=0.01, amsgrad=True)  # the best?
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode='max',
@@ -232,10 +234,21 @@ def get_basic_callbacks(checkpoint_interval) -> list:
 
 def main(hparams):
     # need to know U, mean from the train dataset
-    data = PCADataset(root_dir=hparams["dataset_dir"], batch_size=16)
-    u, mean = data.get_u_mean()
+
+    dataset_personality =  "u_mean.npy" # i mean the largest eigenvalues, mean
 
     if hparams["train"]:
+        data = PCADataset(root_dir=hparams["dataset_dir"], batch_size=32)
+        u, mean = data.get_u_mean()
+        # store U, mean
+        with open(dataset_personality, "wb") as f:
+            np.save(f, u)
+            np.save(f, mean)
+
+        with open(dataset_personality, "wb") as f:
+            np.save(file=f, arr=u)
+            np.save(file=f, arr=u)
+
         name = hparams["model_name"]
         # set train logger
         train_logger = WandbLogger(offline=True,
@@ -262,15 +275,18 @@ def main(hparams):
         save_path = os.path.join(hparams["model_dir"], name)
         torch.save(model.state_dict(), save_path)
 
-    if DEBUG:
+    #if DEBUG:
+    if True:
+        with open(dataset_personality, "rb") as f:
+            u = np.load(f)
+            mean = np.load(f)
+
         path = os.path.join(hparams["model_dir"], hparams["model_name"])
         logger.debug(f"model path: {path}")
         model = NeuralPCA()
         model.load_state_dict(torch.load(path, map_location=torch.device('cpu')))
         model.eval()
 
-        logger.debug("model has been loaded successfully!!! :)")
-        logger.debug("testing how the model predicts...")
         img_path = "../dataset/target_dev/m421_03_p01_i0_0.png"
 
         transform = transforms.Compose([
@@ -278,23 +294,21 @@ def main(hparams):
             transforms.Grayscale(num_output_channels=1)
         ])
         image = (convert_pil_to_tensor_and_transform(img_path, transform))  # numpy form
-        image = torch.tensor((image - mean.numpy()).dot(u.T.numpy())).unsqueeze(0)
-
+        image = torch.tensor((image - mean).dot(u.T)).unsqueeze(0)
+        print(f"for {img_path}")
         print(f"Score: {model(image).detach().ravel()[0]}")
 
 
 if __name__ == "__main__":
 
     # only CPU tests
-    if not torch.cuda.is_available():
-        hparams = {"train": True,
-                   "model_dir": "..",
-                   "model_name": "test.pt",
-                   "root_dir": "../",
-                   "wandb_entity": "skuratovich",
-                   "dataset_dir": "../dataset/",
-                   "GPU": 0
-                   }
-        main(hparams)
-        hparams["train"] = False
-        main(hparams)
+    hparams = {"train": False,
+               "model_dir": "..",
+               "model_name": "neural_pca.pt",
+               "root_dir": "../",
+               "wandb_entity": "skuratovich",
+               "dataset_dir": "../dataset/",
+               "GPU": 1
+               }
+    main(hparams)
+

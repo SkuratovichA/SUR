@@ -18,29 +18,19 @@ class Classifier:
                     non_target_dev='../dataset/non_target_dev'): """
     def __init__(self, hparams):
         self.hparams = hparams
-        # train datasets
         # CREATING DATASETS
-        self.train_d = Dataset(directories=self.hparams["dataset_dir"]["target"], aug=True)
-        self.train_nd = Dataset(directories=self.hparams["dataset_dir"]["non_target"], aug=True)
-        #remove before eval
-        #self.eval = data.Dataset(directiories=self.hparams["eval_dir"])
-        #self.test_d = Dataset(directories=self.hparams["dev_dataset"]["target"]) 
-        #self.test_nd = Dataset(directories=self.hparams["dev_dataset"]["non_target"])
-        #if hparams["train"]:
-        self.train_t = self.train_d.get_wavsMfcc()
-        self.train_n = self.train_nd.get_wavsMfcc()
-            #self.train()
-        #else:
-            #self.load()
+        if hparams["train"]:
+            self.train_d = Dataset(directories=self.hparams["dataset_dir"]["target"], aug=True)
+            self.train_nd = Dataset(directories=self.hparams["dataset_dir"]["non_target"], aug=True)
+            self.train_t = self.train_d.get_wavsMfcc()
+            self.train_n = self.train_nd.get_wavsMfcc()
 
     def train(self):
-        print("TRAINING GMM...")
         self.bgmm_target = BayesianGaussianMixture(n_components=1,  random_state=69, init_params='random', max_iter=2000).fit(self.train_t)
         self.bgmm_non_target = BayesianGaussianMixture(n_components=1, random_state=42, init_params='random', max_iter=2000).fit(self.train_n)
 
     def save(self):
         ''' Save target bgmm model '''
-        print("SAVING GMM...")
         with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["target"]), 'wb') as file:
             pickle.dump(self.bgmm_target, file)
         ''' Save non-target bgmm model '''
@@ -49,7 +39,6 @@ class Classifier:
 
     def load(self):
         ''' Load target bgmm model '''
-        print("LOADING GMM...")
         with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["target"]), 'rb') as file:
             self.bgmm_target = pickle.load(file)
         ''' Load target bgmm model '''

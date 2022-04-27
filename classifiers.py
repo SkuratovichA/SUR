@@ -1,6 +1,6 @@
 # File: classifiers.py
-# Author(s):
-# Date:
+# Author(s): Skuratovich Aliaksandr <xskura01@vutbr.cz>, Tikhonov Maksim <xtikho00@vutbr.cz>
+# Date: 27.4.2022
 
 
 import os

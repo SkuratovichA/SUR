@@ -16,7 +16,7 @@ class Augmentor:
     data = torch.tensor(data).unsqueeze(0)
     val = np.random.rand()
     _id = np.random.randint(10)
-    aug_data = np.empty([1])
+    """ if you want random aug
     try:
 
       if _id < 2:
@@ -33,9 +33,19 @@ class Augmentor:
       if _id < 5:
         aug_data = self.__change_speed(data, sr)
       else: 
-        aug_data = self.__add_noise(data, val)
+        aug_data = self.__add_noise(data, val) 
 
     return aug_data.squeeze().numpy()
+    """
+    # create copy and 4 augmented versions of input signal
+    aug_data = {}
+    aug_data["1"] = data.squeeze().numpy() # copy
+    aug_data["2"] = self.__change_speed(data, sr).squeeze().numpy()
+    aug_data["3"] = self.__reverb(data, val).squeeze().numpy()
+    aug_data["4"] = self.__add_crowd_noise(data).squeeze().numpy()
+    aug_data["5"] = self.__add_noise(data, val).squeeze().numpy()
+
+    return aug_data
 
   def __change_speed(self, data, sr):
     '''
@@ -180,10 +190,17 @@ class Dataset:
 
     def __augment_data(self, data, filename, rate):
       aug_data = self.augmentor.augment_data(data, rate)
+      for index, _ in aug_data.items():
+          aug_data[index] = (aug_data[index] - aug_data[index].mean()) / np.abs(aug_data[index]).max()
+          aug_data[index] = mfcc(y=aug_data[index], sr=rate)
+          aug_data[index] = (aug_data[index] - aug_data[index].mean()) / np.std(aug_data[index])
+          self.wavsMfcc[filename[:-4]+"-aug"+index+".wav"] = aug_data[index].T
+      """ # random augmentation version
       aug_data = (aug_data - aug_data.mean()) / np.abs(aug_data).max()
       aug_data = mfcc(y=aug_data, sr=rate)
       aug_data = (aug_data - aug_data.mean()) / np.std(aug_data)
-      self.wavsMfcc[filename[:-4]+"-aug.wav"] = aug_data.T
+      self.wavsMfcc[filename[:-4]+"-aug.wav"] = aug_data.T 
+      """
 
     def get_wavsMfcc(self):
         return np.vstack(list(self.wavsMfcc.values()))

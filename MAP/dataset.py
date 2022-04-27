@@ -50,14 +50,14 @@ class Augmentor:
     Val - random number, results in 3 cases:
     < 0.33 - 0.5 RIR scale factor
     < 0.67 - 1.0 RIR scale factor
-    > 0.66 - 2.0 RIR scale factor
+    > 0.66 - 1.5 RIR scale factor
     '''
 
     scale_factor = 0.5
     if 0.33 < val < 0.67:
       scale_factor = 1
     elif val > 0.66:
-      scale_factor = 2
+      scale_factor = 1.5
     
     reverb = sb.processing.speech_augmentation.AddReverb('samples/rir_samples/rirs.csv', 
                                                       sorting='random',
@@ -127,9 +127,6 @@ class VoiceActivityDetector:
                     self.out_buffer = np.append(self.out_buffer, window)
         return self.out_buffer
 
-    # def get_voice_samples(self):
-    #    return self.out_buffer
-
 class Dataset:
     def __init__(self, directories, extensions=None, aug=False):
         r"""
@@ -171,19 +168,21 @@ class Dataset:
                 self.__augment_data(sig, f, rate)
 
               sig = (sig - sig.mean()) / np.abs(sig).max()
-              #self.wavs[f] = sig
               sig = mfcc(y=sig, sr=rate)
+              sig = (sig - sig.mean()) / np.std(sig)
               self.wavsMfcc[f] = sig.T
+
             elif self.file_extension(f) == 'png':
               continue
+
         #if not self.pngs or not self.wavsMfcc :
         #  raise ValueError("Directory with train or(and) test samples does not exist")
 
     def __augment_data(self, data, filename, rate):
       aug_data = self.augmentor.augment_data(data, rate)
       aug_data = (aug_data - aug_data.mean()) / np.abs(aug_data).max()
-      #self.wavs[filename[:-4]+"-aug.wav"] = aug_data
       aug_data = mfcc(y=aug_data, sr=rate)
+      aug_data = (aug_data - aug_data.mean()) / np.std(aug_data)
       self.wavsMfcc[filename[:-4]+"-aug.wav"] = aug_data.T
 
     def get_wavsMfcc(self):

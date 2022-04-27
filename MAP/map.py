@@ -16,17 +16,17 @@ class Classifier:
         self.train_d = Dataset(directories=self.hparams["dataset_dir"]["target"], aug=True)
         self.train_nd = Dataset(directories=self.hparams["dataset_dir"]["non_target"], aug=True)
         #remove before eval
-        #self.eval = Dataset(directiories=self.hparams["eval_dataset"])
-        self.test_d = Dataset(directories=self.hparams["dev_dataset"]["target"]) 
-        self.test_nd = Dataset(directories=self.hparams["dev_dataset"]["non_target"])
+        self.eval = Dataset(directiories=self.hparams["eval_dataset"])
+        #self.test_d = Dataset(directories=self.hparams["dev_dataset"]["target"]) 
+        #self.test_nd = Dataset(directories=self.hparams["dev_dataset"]["non_target"])
 
         self.train_t = self.train_d.get_wavsMfcc()
         self.train_n = self.train_nd.get_wavsMfcc()
 
 
     def train(self):
-        self.bgmm_target = BayesianGaussianMixture(n_components=9,  random_state=69, init_params='random', max_iter=2000).fit(self.train_t)
-        self.bgmm_non_target = BayesianGaussianMixture(n_components=11, random_state=42, init_params='random', max_iter=2000).fit(self.train_n)
+        self.bgmm_target = BayesianGaussianMixture(n_components=1,  random_state=69, init_params='random', max_iter=2000).fit(self.train_t)
+        self.bgmm_non_target = BayesianGaussianMixture(n_components=1, random_state=42, init_params='random', max_iter=2000).fit(self.train_n)
 
     def save(self):
         ''' Save target bgmm model '''

@@ -89,7 +89,7 @@ class VoiceActivityDetector:
     def vad(self, _frame):
         frame = np.array(_frame) ** 2.
         result = True
-        threshold = 0.1 # adaptive threshold
+        threshold = 0.08 # adaptive threshold
         thd = np.min(frame) + np.ptp(frame) * threshold
         self.VADthd = (self.VADn * self.VADthd + thd) / float(self.VADn + 1.)
         self.VADn += 1.
@@ -127,7 +127,7 @@ class VoiceActivityDetector:
     #    return self.out_buffer
 
 class Dataset:
-    def __init__(self, directories, extensions=None, aug = False):
+    def __init__(self, directories, extensions=None, aug=False):
         r"""
         Creates a dataset files in specified directories.
 
@@ -191,7 +191,6 @@ class Dataset:
 
 def main():
     dataset = Dataset(['target_dev', 'target_train'])
-    print(len(dataset.wavsMfcc))
 
 
 if __name__ == "__main__":

@@ -23,4 +23,13 @@ def main(hparams):
 
 # TODO: parse hyperpyyaml here
 hparams = yaml.safe_load('hp.yaml')
+hparams = {
+    "CNN": {"train" : False,
+            "eval" : False},
+    "MAP": {"train": True,
+            "eval" : True},
+    "Neural_PCA" : {"train" : False,
+                    "eval" : False}
+}
+
 main(hparams)

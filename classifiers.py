@@ -70,7 +70,6 @@ class MAPClassifier(Classifier):
         # load and test model
         if hparams["eval"]:
             self.model.load()
-            self.model.evaluateIter()
 
     def predict(self, filename):
         soft, hard = self.model.evaluate(filename)

@@ -3,9 +3,12 @@ import dataset as data
 import numpy as np
 from numpy import sum
 from MAP.dataset import Dataset
+from MAP.dataset import VoiceActivityDetector
 from sklearn.mixture import BayesianGaussianMixture
 import os
+import librosa as lb
 import pickle
+from librosa.feature import mfcc
 
 class Classifier:
     
@@ -16,13 +19,13 @@ class Classifier:
     def __init__(self, hparams):
         self.hparams = hparams
         # train datasets
-        print("CREATING DATASETS...")
+        # CREATING DATASETS
         self.train_d = Dataset(directories=self.hparams["dataset_dir"]["target"], aug=True)
         self.train_nd = Dataset(directories=self.hparams["dataset_dir"]["non_target"], aug=True)
         #remove before eval
-        #self.eval = data.Dataset(directiories=self.hparams["eval_dataset"])
-        self.test_d = Dataset(directories=self.hparams["dev_dataset"]["target"]) 
-        self.test_nd = Dataset(directories=self.hparams["dev_dataset"]["non_target"])
+        #self.eval = data.Dataset(directiories=self.hparams["eval_dir"])
+        #self.test_d = Dataset(directories=self.hparams["dev_dataset"]["target"]) 
+        #self.test_nd = Dataset(directories=self.hparams["dev_dataset"]["non_target"])
         #if hparams["train"]:
         self.train_t = self.train_d.get_wavsMfcc()
         self.train_n = self.train_nd.get_wavsMfcc()
@@ -88,8 +91,18 @@ class Classifier:
         return maximize_me
 
     def evaluate(self, filename):
-        ll_t = self.bgmm_target.score_samples(self.eval.wavsMfcc[filename])
-        ll_n = self.bgmm_non_target.score_samples(self.eval.wavsMfcc[filename])
+        # get file
+        sig, rate = lb.load(filename, sr=16000)
+              
+        sig = sig[26000:] # cut first 2 seconds
+        VAD = VoiceActivityDetector()
+        sig = VAD.process(sig) # cut silence
+
+        sig = (sig - sig.mean()) / np.abs(sig).max()
+        sig = mfcc(y=sig, sr=rate)
+        # evaluate
+        ll_t = self.bgmm_target.score_samples(sig)
+        ll_n = self.bgmm_non_target.score_samples(sig)
         return sum(ll_t) - sum(ll_n), int((sum(ll_t) - sum(ll_n)) > 0)
 
     def evaluateIter(self):

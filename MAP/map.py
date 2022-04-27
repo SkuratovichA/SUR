@@ -1,5 +1,5 @@
 # File: map.py
-# Author: Maksim Tikhonov <xtikho00@vutbr.cz>
+# Author: Tikhonov Maksim <xtikho00@vutbr.cz>
 # Date: 27.4.2022, 3.42 AM
 
 import dataset as data
@@ -91,7 +91,8 @@ class Classifier:
         sig = VAD.process(sig) # cut silence
 
         sig = (sig - sig.mean()) / np.abs(sig).max()
-        sig = mfcc(y=sig, sr=rate).T
+        sig = mfcc(y=sig, sr=rate)
+        sig = (sig - sig.mean()) / np.std(sig).T
         # evaluate
         ll_t = self.bgmm_target.score_samples(sig)
         ll_n = self.bgmm_non_target.score_samples(sig)
@@ -124,20 +125,3 @@ class Classifier:
 def main(hparams):
     
     return Classifier(hparams)
-
-""" 
-hparams = { "train": False, # if not true -- load
-            "eval": True,
-            "model_dir": "./models",
-            "dataset_dir": {"non_target": "./dataset/non_target_train", "target": "./dataset/target_train"},
-            "dev_dataset" : {"non_target": "./dataset/non_target_dev", "target": "./dataset/target_dev"},
-
-            "model_name": {"target": "bgmm_target.pkl", "non_target": "bgmm_non_target.pkl"},
-            "eval_dir": "./eval",
-            "eval_out": "output",
-            "GPU": 0,
-            "root_dir": ".",
-            "wandb_entity": "skuratovich"}
-
-main(hparams)
- """

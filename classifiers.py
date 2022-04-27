@@ -72,7 +72,7 @@ class CNNClassifier(Classifier):
 
         # load and test model
         if self.hparams["eval"]:
-            path = os.path.join(self.hparams['model_dir'] + '/', self.hparams['model_name'])
+            path = os.path.join(self.hparams['model_dir'], self.hparams['model_name'])
             logger.debug(f"Loading model from {path}...")
             self.model = CNNKyticko()
             # load a model (in models/<name>)

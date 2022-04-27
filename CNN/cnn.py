@@ -21,7 +21,6 @@ from pytorch_lightning.callbacks import Callback
 
 import logging
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('(%(levelname)s): %(funcName)s:%(lineno)d %(message)s')
@@ -291,16 +290,18 @@ def main(hparams):
 
 if __name__ == "__main__":
 
-    # only CPU tests
-    if not torch.cuda.is_available():
-        hparams = {"train": False,
-                   "model_dir": "..",
-                   "model_name": "test.pt",
-                   "root_dir": "../",
-                   "wandb_entity": "skuratovich",
-                   "dataset_dir": "../dataset/",
-                   "GPU": 0
-                   }
-        main(hparams)
-        hparams["train"] = False
-        main(hparams)
+    hparams = {"train": False,
+               "model_dir": "..",
+               "model_name": "test.pt",
+               "root_dir": "../",
+               "wandb_entity": "skuratovich",
+               "dataset_dir": "../dataset/",
+               "GPU": 0
+               }
+    if torch.cuda.is_available():
+        from safe_gpu import safe_gpu
+        gpuOwner = safe_gpu.GPUOwner(1)
+        hparams["GPU"] = 1
+    main(hparams)
+    hparams["train"] = False
+    main(hparams)

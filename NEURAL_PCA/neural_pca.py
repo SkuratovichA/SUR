@@ -2,9 +2,6 @@
 # Author: Skuratovich Aliaksandr <xskura01@vutbr.cz>
 # Date: 27.4.2022, 3.46 AM
 
-from safe_gpu import safe_gpu
-gpu_owner = safe_gpu.GPUOwner(1)
-
 import os
 import torch
 import numpy as np
@@ -300,14 +297,18 @@ def main(hparams):
 
 if __name__ == "__main__":
 
-    # only CPU tests
     hparams = {"train": False,
                "model_dir": "..",
-               "model_name": "neural_pca.pt",
+               "model_name": "test_neural_pca.pt",
                "root_dir": "../",
                "wandb_entity": "skuratovich",
                "dataset_dir": "../dataset/",
-               "GPU": 1
+               "GPU": 0
                }
+    if torch.cuda.is_available():
+        from safe_gpu import safe_gpu
+        gpu_owner = safe_gpu.GPUOwner(1)
+        hparams["GPU"] = 1
+
     main(hparams)
 

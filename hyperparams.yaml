@@ -26,3 +26,4 @@ Neural_PCA:
   <<: *default
   model_name: NeuralPCA.pt
   eval_out: Neural_PCA_out.txt
+  u_mean: ./NEURAL_PCA/u_mean.npy

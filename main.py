@@ -22,27 +22,6 @@ def main(hparams):
 
 
 # parse hyperpyyaml
-with open("hp.yaml", 'r') as stream:
+with open("hyperparams.yaml", 'r') as stream:
     hparams = yaml.safe_load(stream)
-
-#print("ZDES':", hparams)
-""" hparams = {
-    "CNN": {"train" : False,
-            "eval" : False},
-    "MAP": {"train": False, # if not true -- load
-            "eval": True,
-            "model_dir": "./models",
-            "dataset_dir": {"non_target": "./dataset/non_target_train", "target": "./dataset/target_train"},
-            "dev_dataset" : {"non_target": "./dataset/non_target_dev", "target": "./dataset/target_dev"},
-
-            "model_name": {"target": "bgmm_target.pkl", "non_target": "bgmm_non_target.pkl"},
-            "eval_dir": "./eval",
-            "eval_out": "output",
-            "GPU": 0,
-            "root_dir": ".",
-            "wandb_entity": "skuratovich"},
-    "Neural_PCA" : {"train" : True,
-                    "eval" : False}
-} """
-
 main(hparams)

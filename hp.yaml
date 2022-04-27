@@ -2,7 +2,7 @@ default: &default
   train: True # if not true -- load
   eval: True
   model_dir: ./models
-  train_dir: {non_target: ./dataset/non_target_train, target: ./dataset/target_train}
+  dataset_dir: {non_target: ./dataset/non_target_train, target: ./dataset/target_train}
   eval_dir: ./eval
   eval_out: output
   GPU: 0

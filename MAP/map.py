@@ -1,4 +1,3 @@
-from msilib import _directories
 from dataset import Dataset
 import numpy as np
 from numpy import sum
@@ -14,8 +13,8 @@ class Classifier:
     def __init__(self, hparams):
         self.hparams = hparams
         # train datasets
-        self.train_d = Dataset(directories=self.hparams["train_dir"]["target"], aug=True)
-        self.train_nd = Dataset(directories=self.hparams["train_dir"]["non_target"], aug=True)
+        self.train_d = Dataset(directories=self.hparams["dataset_dir"]["target"], aug=True)
+        self.train_nd = Dataset(directories=self.hparams["dataset_dir"]["non_target"], aug=True)
         #remove before eval
         #self.eval = Dataset(directiories=self.hparams["eval_dataset"])
         self.test_d = Dataset(directories=self.hparams["dev_dataset"]["target"]) 

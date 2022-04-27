@@ -8,7 +8,7 @@ pl.utilities.seed.seed_everything(42)
 def main(hparams):
     dicts = {"Neural_PCA": NeuralPCAClassifier, "MAP": MAPClassifier, "CNN": CNNClassifier}
 
-    for key, classifier in dicts:
+    for key, classifier in dicts.items():
 
         if hparams[key]["train"]:
             interface = classifier(train=True, hparams=hparams[key])
@@ -23,13 +23,14 @@ def main(hparams):
 
 # TODO: parse hyperpyyaml here
 hparams = yaml.safe_load('hp.yaml')
-hparams = {
+print(hparams)
+""" hparams = {
     "CNN": {"train" : False,
             "eval" : False},
     "MAP": {"train": True,
             "eval" : True},
     "Neural_PCA" : {"train" : False,
                     "eval" : False}
-}
+} """
 
 main(hparams)

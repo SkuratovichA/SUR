@@ -1,7 +1,10 @@
-from dataset import Dataset
+#from dataset import Dataset
+import dataset as data
 import numpy as np
 from numpy import sum
+from MAP.dataset import Dataset
 from sklearn.mixture import BayesianGaussianMixture
+import os
 import pickle
 
 class Classifier:
@@ -13,16 +16,23 @@ class Classifier:
     def __init__(self, hparams):
         self.hparams = hparams
         # train datasets
+        print("TUT: ", "../"+self.hparams["dev_dataset"]["target"])
+        print("TUT: ", "../"+self.hparams["dataset_dir"]["target"])
         self.train_d = Dataset(directories=self.hparams["dataset_dir"]["target"], aug=True)
         self.train_nd = Dataset(directories=self.hparams["dataset_dir"]["non_target"], aug=True)
         #remove before eval
-        self.eval = Dataset(directiories=self.hparams["eval_dataset"])
-        #self.test_d = Dataset(directories=self.hparams["dev_dataset"]["target"]) 
-        #self.test_nd = Dataset(directories=self.hparams["dev_dataset"]["non_target"])
+        #self.eval = data.Dataset(directiories=self.hparams["eval_dataset"])
+        self.test_d = Dataset(directories=self.hparams["dev_dataset"]["target"]) 
+        self.test_nd = Dataset(directories=self.hparams["dev_dataset"]["non_target"])
 
         self.train_t = self.train_d.get_wavsMfcc()
         self.train_n = self.train_nd.get_wavsMfcc()
-
+        print("TRAINING...")
+        self.train()
+        print("EVALUATING...")
+        self.evaluateIter()
+        print("SAVING...")
+        self.save()
 
     def train(self):
         self.bgmm_target = BayesianGaussianMixture(n_components=1,  random_state=69, init_params='random', max_iter=2000).fit(self.train_t)
@@ -30,18 +40,19 @@ class Classifier:
 
     def save(self):
         ''' Save target bgmm model '''
-        with open(self.hparams["model_dir"] + '/' + self.hparams["model_name"]["target"], 'wb') as file:
+        
+        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["target"]), 'wb') as file:
             pickle.dump(self.bgmm_target, file)
         ''' Save non-target bgmm model '''
-        with open(self.hparams["model_dir"] + '/' + self.hparams["model_name"]["non_target"], 'wb') as file:
+        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["non-target"]), 'wb') as file:
             pickle.dump(self.bgmm_non_target, file)
 
     def load(self):
         ''' Load target bgmm model '''
-        with open(self.hparams["model_dir"] + '/' + self.hparams["model_name"]["target"], 'rb') as file:
+        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["target"]), 'rb') as file:
             self.bgmm_target = pickle.load(file)
         ''' Load target bgmm model '''
-        with open(self.hparams["model_dir"] + '/' + self.hparams["model_name"]["non_target"], 'rb') as file:
+        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["target"]), 'rb') as file:
             self.bgmm_non_target = pickle.load(file)
 
     def print_res(self, scores, printMe=True):
@@ -84,11 +95,12 @@ class Classifier:
         return f"{(sum(ll_t) - sum(ll_n)):.2f}", int((sum(ll_t) - sum(ll_n)) > 0)
 
     def evaluateIter(self):
-        # change test to some testdir 
-        for _, test in enumerate(self.test_nd.wavsMfcc):
-            ll_t = self.bgmm_target.score_samples(test)
-            ll_n = self.bgmm_non_target.score_samples(test)
-            print(test.split(), ":", f"{(sum(ll_t) - sum(ll_n)):.2f, int(sum(ll_t) < sum(ll_n))}", file=self.hparams["eval_dir"]+"/"+self.params["eval_out"])
+        # change test to some testdir
+        print(self.test_d.wavsMfcc)
+        for testname, wav in self.test_nd.wavsMfcc.items():
+            ll_t = self.bgmm_target.score_samples(self.test_nd.wavsMfcc[testname])
+            ll_n = self.bgmm_non_target.score_samples(self.test_nd.wavsMfcc[testname])
+            print(testname.split('/')[-1], f"{(sum(ll_t) - sum(ll_n)):.2f}    {int((sum(ll_n) - sum(ll_t)) > 0)}")#, file=self.hparams["eval_dir"]+"/"+self.params["eval_out"])
 
     def print_score(self):
 
@@ -111,5 +123,17 @@ def main(hparams):
     
     return Classifier(hparams)
 
-main()
+hparams = {"train": True,
+            "eval" : True,
+            "train": True, # if not true -- load
+            "eval": True,
+            "model_dir": "./models",
+            "dataset_dir": {"non_target": "./dataset/non_target_train", "target": "./dataset/target_train"},
+            "dev_dataset" : {"non_target": "./dataset/non_target_dev", "target": "./dataset/target_dev"},
+            "eval_dir": "./eval",
+            "eval_out": "output",
+            "GPU": 0,
+            "root_dir": ".",
+            "wandb_entity": "skuratovich"}
 
+main(hparams)

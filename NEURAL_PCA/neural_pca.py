@@ -1,4 +1,4 @@
-# File: cnn.py
+# File: neural_pca.py
 # Author: Skuratovich Aliaksandr <xskura01@vutbr.cz>
 # Date: 27.4.2022, 3.46 AM
 

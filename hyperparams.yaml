@@ -9,6 +9,8 @@ default: &default
   wandb_entity: skuratovich
 
 CNN:
+  train: False
+  eval: False
   <<: *default
   train: False
   eval: False
@@ -16,6 +18,8 @@ CNN:
 
 MAP:
   <<: *default
+  train: True
+  eval: True
   dataset_dir: {non_target: ./dataset/non_target_train, target: ./dataset/target_train}
   model_name: {target: bgmm_target.pkl, non_target: bgmm_non_target.pkl}
   dev_dataset: {non_target: ./dataset/non_target_dev, target: ./dataset/target_dev}

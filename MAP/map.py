@@ -88,7 +88,7 @@ class Classifier:
         sig = VAD.process(sig) # cut silence
 
         sig = (sig - sig.mean()) / np.abs(sig).max()
-        sig = mfcc(y=sig, sr=rate)
+        sig = mfcc(y=sig, sr=rate).T
         # evaluate
         ll_t = self.bgmm_target.score_samples(sig)
         ll_n = self.bgmm_non_target.score_samples(sig)

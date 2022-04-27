@@ -1,29 +1,42 @@
+# File: cnn.py
+# Author: Skuratovich Aliaksandr <xskura01@vutbr.cz>
+# Date: 27.4.2022, 3.42 AM
+
+
 import os
-import torchvision
-import torchvision.transforms as transforms
-import numpy as np
+import wandb
 import torch
+import numpy as np
+import pandas as pd
 from torch import nn
-from torch.utils.data import DataLoader
+from PIL import Image
 import pytorch_lightning as pl
 from torchmetrics import Accuracy
-from PIL import Image
 from imgaug import augmenters as iaa
-import pandas as pd
 from torch.utils.data import Dataset
-import wandb
-from pytorch_lightning.loggers import WandbLogger, TensorBoardLogger
+from torch.utils.data import DataLoader
+import torchvision.transforms as transforms
+from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import Callback
 
-from safe_gpu import safe_gpu
+import logging
 
-NUM_GPUS = 1 if torch.cuda.is_available else 0
-gpu_owner = safe_gpu.GPUOwner(NUM_GPUS)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('(%(levelname)s): %(funcName)s:%(lineno)d %(message)s')
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
+
+DEBUG = False
+EPOCHS = 1 if DEBUG else 50000
+logger.disabled = not DEBUG
 
 
 class SURDataset(Dataset):
     def __init__(self, root_dir, csv, transform=None):
-        self.annotations = pd.read_csv(csv)
+        self.annotations = pd.read_csv(os.path.join(root_dir, csv))
         self.root_dir = root_dir
         self.transform = transform
 
@@ -87,6 +100,7 @@ class ImageTransform:
 class SmallDataset(pl.LightningDataModule):
     def __init__(self, root_dir: str = '.', batch_size: int = 32):
         super().__init__()
+
         self.root_dir = root_dir
         self.batch_size = batch_size
         self.num_workers = 1
@@ -103,42 +117,36 @@ class SmallDataset(pl.LightningDataModule):
         return dataloader
 
 
-pl.utilities.seed.seed_everything(42)
-
-
-# import wandb
-# wandb.login()
-
 class CNNKyticko(pl.LightningModule):
     def __init__(self):
-        # self.save_hyperparameters() # if wandb logger, uncomment?
+        self.save_hyperparameters()
         super().__init__()
         self.linear = nn.ReLU()
         self.activ = nn.GELU()
 
         self.model = nn.Sequential(
 
-            nn.Dropout(0.01),  # self-augmentation
+            nn.Dropout(0.05),  # self-augmentation
 
             nn.Conv2d(1, 8, kernel_size=5, padding=3), self.activ,
             nn.MaxPool2d(2, 2),
             nn.BatchNorm2d(num_features=8),
-            nn.Dropout(0.1),
+            nn.Dropout(0.09),
 
             nn.Conv2d(8, 16, kernel_size=3, padding=1), self.activ,
             nn.MaxPool2d(2, 2),
             nn.BatchNorm2d(num_features=16),
-            nn.Dropout(0.3),
+            nn.Dropout(0.35),
 
             nn.Conv2d(16, 32, kernel_size=3, padding=1), self.activ,
             nn.MaxPool2d(2, 2),
             nn.BatchNorm2d(num_features=32),
-            nn.Dropout(0.4),
+            nn.Dropout(0.45),
 
             nn.Conv2d(32, 64, kernel_size=3, padding=1), self.activ,
             nn.MaxPool2d(2, 2),
             nn.BatchNorm2d(num_features=64),
-            nn.Dropout(0.4),
+            nn.Dropout(0.45),
 
             nn.Flatten(),
             nn.BatchNorm1d(num_features=1600),
@@ -150,6 +158,7 @@ class CNNKyticko(pl.LightningModule):
         self.accuracy = Accuracy()
 
     def forward(self, x):
+        print("x.shape: ", x.shape)
         x = self.model(x)
         return x
 
@@ -178,7 +187,7 @@ class CNNKyticko(pl.LightningModule):
         return preds, loss, acc
 
     def configure_optimizers(self):
-        optimizer = torch.optim.RMSprop(self.parameters(), lr=0.000001, weight_decay=0.001, momentum=0.99)
+        optimizer = torch.optim.RMSprop(self.parameters(), lr=0.00000008, weight_decay=0.00156, momentum=0.999)
 
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
@@ -186,7 +195,7 @@ class CNNKyticko(pl.LightningModule):
             factor=0.8,
             patience=1,
             threshold=0.0001,
-            min_lr=0.000001,
+            min_lr=0.e-14,  # almost zero lol
             verbose=True
         )
         lr_scheduler_config = {
@@ -199,8 +208,8 @@ class CNNKyticko(pl.LightningModule):
 
 
 class LogPredictionsCallback(Callback):
-    def __init__(self, logger):
-        self.logger = logger
+    def __init__(self, train_logger):
+        self.train_logger = train_logger
 
     def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
         """Called when the validation batch ends."""
@@ -214,40 +223,84 @@ class LogPredictionsCallback(Callback):
 
             columns = ['image', 'ground truth', 'prediction']
             data = [[wandb.Image(x_i), y_i, y_pred] for x_i, y_i, y_pred in list(zip(x[:n], y[:n], outputs[:n]))]
-            self.logger.log_table(key='sample_table', columns=columns, data=data)
+            self.train_logger.log_table(key='sample_table', columns=columns, data=data)
 
 
-def get_basic_callbacks(checkpoint_interval, logger) -> list:
+def get_basic_callbacks(checkpoint_interval, train_logger) -> list:
     lr_callback = pl.callbacks.LearningRateMonitor(logging_interval='epoch')
-    ckpt_callback = pl.callbacks.ModelCheckpoint(filename='epoch{epoch:03d}', auto_insert_metric_name=False, save_top_k=1, every_n_epochs=checkpoint_interval)
-    prediction_callback = LogPredictionsCallback(logger)
+    ckpt_callback = pl.callbacks.ModelCheckpoint(filename='epoch{epoch:03d}',
+                                                 auto_insert_metric_name=False,
+                                                 save_top_k=1,
+                                                 every_n_epochs=checkpoint_interval)
+    prediction_callback = LogPredictionsCallback(train_logger)
 
     return [ckpt_callback, lr_callback, prediction_callback]
 
 
 def main(hparams):
-    if not eval:
+    if hparams["train"]:
         name = hparams["model_name"]
-        logger = TensorBoardLogger('tensorboard', name='cnn')
-        # logger = WandbLogger(offline=False, name=name, project="cnn", save_dir='../models/wandb') # TODO: change savedir?
-        # make wandb work both online and offline?
+        # set train logger
+        train_logger = WandbLogger(offline=True,
+                                   name=name,
+                                   project="cnnMerlin",
+                                   save_dir=os.path.join(hparams["root_dir"], 'wandb'),
+                                   entity=hparams["wandb_entity"])
+        os.environ["WANDB_MODE"] = "offline"
 
-        # create a dataset for training
         data = SmallDataset(root_dir=hparams["dataset_dir"], batch_size=4)
-        model = CNNKyticko()
 
-        if isinstance(logger, WandbLogger):
-            logger.watch(model)
+        model = CNNKyticko()
+        train_logger.watch(model, log_freq=500)
+
         trainer = pl.Trainer(
-            max_epochs=1000,
-            callbacks=get_basic_callbacks(checkpoint_interval=10, logger=logger),
-            default_root_dir='.',  # TODO: probably change the root dir. E.g. models/CNN/... ?
-            gpus=NUM_GPUS, # TODO: add a possibility to train on the machine without gpu: Control, if gpus are available and set this parameter
+            max_epochs=EPOCHS,
+            callbacks=get_basic_callbacks(checkpoint_interval=10, train_logger=train_logger),
+            default_root_dir=hparams["root_dir"],
+            gpus=hparams["GPU"],
             num_sanity_val_steps=1,
             log_every_n_steps=10,
-            logger=logger
+            logger=train_logger
         )
+
         trainer.fit(model, data)
-        torch.save(model.state_dict(), name + ".pt")  # TODO: check if ".pt" is needed
-        if isinstance(logger, WandbLogger):
-            wandb.finish()
+
+        save_path = os.path.join(hparams["model_dir"], name)
+        logger.info(f"Saving model: {save_path}")
+        torch.save(model.state_dict(), save_path)
+
+    if DEBUG:
+        path = os.path.join(hparams['model_dir'], hparams['model_name'])
+        logger.debug(f"model path: {path}")
+        model = CNNKyticko()
+        model.load_state_dict(torch.load(path, map_location=torch.device('cpu')))
+
+        model.eval()
+        logger.debug("model has been loaded successfully!!! :)")
+        logger.debug("testing how the model predicts...")
+        img_path = "../dataset/non_target_dev/f407_01_f13_i0_0.png"
+
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Grayscale(num_output_channels=1)
+        ])
+        image = transform(np.array(Image.open(img_path))).unsqueeze(0)
+
+        print(f"Score: {model(image).detach().ravel()[0]}")
+
+
+if __name__ == "__main__":
+
+    # only CPU tests
+    if not torch.cuda.is_available():
+        hparams = {"train": False,
+                   "model_dir": "..",
+                   "model_name": "test.pt",
+                   "root_dir": "../",
+                   "wandb_entity": "skuratovich",
+                   "dataset_dir": "../dataset/",
+                   "GPU": 0
+                   }
+        main(hparams)
+        hparams["train"] = False
+        main(hparams)

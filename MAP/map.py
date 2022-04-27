@@ -16,19 +16,20 @@ class Classifier:
     def __init__(self, hparams):
         self.hparams = hparams
         # train datasets
-        print("TUT: ", "../"+self.hparams["dev_dataset"]["target"])
-        print("TUT: ", "../"+self.hparams["dataset_dir"]["target"])
+        print("CREATING DATASETS...")
         self.train_d = Dataset(directories=self.hparams["dataset_dir"]["target"], aug=True)
         self.train_nd = Dataset(directories=self.hparams["dataset_dir"]["non_target"], aug=True)
         #remove before eval
         #self.eval = data.Dataset(directiories=self.hparams["eval_dataset"])
         self.test_d = Dataset(directories=self.hparams["dev_dataset"]["target"]) 
         self.test_nd = Dataset(directories=self.hparams["dev_dataset"]["non_target"])
-
-        self.train_t = self.train_d.get_wavsMfcc()
-        self.train_n = self.train_nd.get_wavsMfcc()
-        print("TRAINING...")
-        self.train()
+        if hparams["train"]:
+            self.train_t = self.train_d.get_wavsMfcc()
+            self.train_n = self.train_nd.get_wavsMfcc()
+            print("TRAINING...")
+            self.train()
+        else:
+            self.load()
         print("EVALUATING...")
         self.evaluateIter()
         print("SAVING...")
@@ -44,12 +45,12 @@ class Classifier:
         with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["target"]), 'wb') as file:
             pickle.dump(self.bgmm_target, file)
         ''' Save non-target bgmm model '''
-        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["non-target"]), 'wb') as file:
+        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["non_target"]), 'wb') as file:
             pickle.dump(self.bgmm_non_target, file)
 
     def load(self):
         ''' Load target bgmm model '''
-        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["target"]), 'rb') as file:
+        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["non_target"]), 'rb') as file:
             self.bgmm_target = pickle.load(file)
         ''' Load target bgmm model '''
         with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["target"]), 'rb') as file:
@@ -123,13 +124,14 @@ def main(hparams):
     
     return Classifier(hparams)
 
-hparams = {"train": True,
-            "eval" : True,
-            "train": True, # if not true -- load
+""" 
+hparams = { "train": False, # if not true -- load
             "eval": True,
             "model_dir": "./models",
             "dataset_dir": {"non_target": "./dataset/non_target_train", "target": "./dataset/target_train"},
             "dev_dataset" : {"non_target": "./dataset/non_target_dev", "target": "./dataset/target_dev"},
+
+            "model_name": {"target": "bgmm_target.pkl", "non_target": "bgmm_non_target.pkl"},
             "eval_dir": "./eval",
             "eval_out": "output",
             "GPU": 0,
@@ -137,3 +139,4 @@ hparams = {"train": True,
             "wandb_entity": "skuratovich"}
 
 main(hparams)
+ """

@@ -124,7 +124,6 @@ class PCADataset(pl.LightningDataModule):
         def pca_transform(datas, u, mean_):
             d_u = torch.tensor((datas.numpy() - mean_.numpy()).dot(u.T.numpy()))
             return d_u
-
         train_d, train_l = get_images(os.path.join(root_dir, 'all.csv'), is_train=True)
         val_d, val_l = get_images(os.path.join(root_dir, 'dev_PCA.csv'), is_train=False)
         self.shape = len(train_d)

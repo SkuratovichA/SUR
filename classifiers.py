@@ -29,14 +29,14 @@ class Classifier:
 
 
 class NeuralPCAClassifier(Classifier):
-    def __init__(self, train, hparams):
-        super(NeuralPCAClassifier).__init__(hparams)
+    def __init__(self, hparams):
+        super().__init__(hparams)
 
         if self.hparams["train"]:
-            NEURAL_PCA.neural_pca.main(self.hparams)
+            NEURAL_PCA.neural_pca.main(hparams)
 
         if self.hparams["eval"]:
-            self.u, self.mean = PCADataset(root_dir=hparams["dataset_dir"], batch_size=16).get_u_mean()
+            self.u, self.mean = PCADataset(root_dir=hparams["root_dir"], batch_size=16).get_u_mean()
             path = os.path.join(hparams["model_dir"], hparams["model_name"])
             self.model = NeuralPCA()
             logger.debug(f"model path: {path}")
@@ -57,15 +57,15 @@ class NeuralPCAClassifier(Classifier):
 
 class MAPClassifier(Classifier):
     def __init__(self, hparams):
-        super(MAPClassifier).__init__(hparams)
-        self.model = MAP.map.main(self.hparams)
+        super().__init__(hparams)
+        self.model = MAP.map.main(hparams)
         # train model and store it
-        if self.hparams["train"]:
+        if hparams["train"]:
             self.model.train()
             self.model.save()
 
         # load and test model
-        if self.hparams["eval"]:
+        if hparams["eval"]:
             self.model.load()
             self.model.evaluateIter()
 
@@ -75,7 +75,7 @@ class MAPClassifier(Classifier):
 
 class CNNClassifier(Classifier):
     def __init__(self, hparams):
-        super(CNNClassifier).__init__(hparams)
+        super().__init__(hparams)
 
         # train and save the model
         if self.hparams["train"]:

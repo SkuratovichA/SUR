@@ -2,7 +2,7 @@ default: &default
   train: True # if not true -- load
   eval: True
   model_dir: ./models
-  dataset_dir: {non_target: ./dataset/non_target_train, target: ./dataset/target_train}
+  dataset_dir: ./dataset
   eval_dir: ./eval
   eval_out: output
   GPU: 0
@@ -11,19 +11,18 @@ default: &default
 
 CNN:
   <<: *default
-  #dataset: 
   model_name: CNNKyticko.pt
   eval_out: cnn_out.txt
 
 MAP:
   <<: *default
-  #dataset: 
+  
+  dataset_dir: {non_target: ./dataset/non_target_train, target: ./dataset/target_train}
   model_name: {target: bgmm_target.pkl, non_target: bgmm_non_target.pkl}
   dev_dataset: {non_target: ./dataset/non_target_dev, target: ./dataset/target_dev}
   eval_out: map_out.txt
 
 Neural_PCA:
   <<: *default
-  #dataset: 
   model_name: NeuralPCA.pt
   eval_out: Neural_PCA_out.txt

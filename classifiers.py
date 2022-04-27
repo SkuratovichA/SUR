@@ -1,15 +1,15 @@
+import os
 import torch
 import CNN.cnn
-from CNN.cnn import CNNKyticko
 import MAP.map
 import NEURAL_PCA
-from NEURAL_PCA.neural_pca import NeuralPCA, PCA_dataset
-import logging
-from PIL import Image
 import numpy as np
-import torchvision
+from PIL import Image
+from CNN.cnn import CNNKyticko
 import torchvision.transforms as transforms
-import os
+from NEURAL_PCA.neural_pca import NeuralPCA, PCADataset
+
+import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -30,19 +30,29 @@ class Classifier:
 
 class NeuralPCAClassifier(Classifier):
     def __init__(self, train, hparams):
-        super(NeuralPCAClassifier).__init__(train, hparams)
-        self.data = PCA_dataset(root_dir=hparams["root_dir"], batch_size=16)
-        U, mean = self.data.get_U_mean()
+        super(NeuralPCAClassifier).__init__(hparams)
+
         if self.hparams["train"]:
-            pass
+            NEURAL_PCA.neural_pca.main(self.hparams)
 
         if self.hparams["eval"]:
-            pass
+            self.u, self.mean = PCADataset(root_dir=hparams["dataset_dir"], batch_size=16).get_u_mean()
+            path = os.path.join(hparams["model_dir"], hparams["model_name"])
+            self.model = NeuralPCA()
+            logger.debug(f"model path: {path}")
+            self.model.load_state_dict(torch.load(path, map_location=torch.device('cpu')))
+            self.model.eval()
 
     def predict(self, filename):
-        # todo: transform an image
-        # todo: normalize (as pca does) the image
-        pass
+        transform = transforms.Compose([
+           transforms.ToTensor(),
+           transforms.Grayscale(num_output_channels=1)
+        ])
+        image = (NEURAL_PCA.neural_pca.convert_pil_to_tensor_and_transform(filename, transform))  # numpy form
+        image = torch.tensor((image - self.mean.numpy()).dot(self.u.T.numpy())).unsqueeze(0)
+
+        soft = self.model(image).detach().ravel()[0]
+        return soft, int(soft > .5)
 
 
 class MAPClassifier(Classifier):

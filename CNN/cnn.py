@@ -4,21 +4,23 @@
 
 
 import os
-import torchvision.transforms as transforms
-import numpy as np
+import wandb
 import torch
+import numpy as np
+import pandas as pd
 from torch import nn
-from torch.utils.data import DataLoader
+from PIL import Image
 import pytorch_lightning as pl
 from torchmetrics import Accuracy
-from PIL import Image
 from imgaug import augmenters as iaa
-import pandas as pd
 from torch.utils.data import Dataset
-import wandb
-from pytorch_lightning.loggers import WandbLogger, TensorBoardLogger
+from torch.utils.data import DataLoader
+import torchvision.transforms as transforms
+from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import Callback
+
 import logging
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -247,6 +249,7 @@ def main(hparams):
         os.environ["WANDB_MODE"] = "offline"
 
         data = SmallDataset(root_dir=hparams["dataset_dir"], batch_size=4)
+
         model = CNNKyticko()
         train_logger.watch(model, log_freq=500)
 
@@ -268,10 +271,8 @@ def main(hparams):
 
     if DEBUG:
         path = os.path.join(hparams['model_dir'], hparams['model_name'])
-        logger.debug(f"path: {path}")
+        logger.debug(f"model path: {path}")
         model = CNNKyticko()
-        # load a model (in models/<name>)
-        logger.debug("created a torch class")
         model.load_state_dict(torch.load(path, map_location=torch.device('cpu')))
 
         model.eval()
@@ -303,4 +304,3 @@ if __name__ == "__main__":
         main(hparams)
         hparams["train"] = False
         main(hparams)
-

@@ -1,3 +1,8 @@
+# File: cnn.py
+# Author: Skuratovich Aliaksandr <xskura01@vutbr.cz>
+# Date: 27.4.2022, 3.42 AM
+
+
 import os
 import torchvision.transforms as transforms
 import numpy as np
@@ -22,7 +27,7 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-DEBUG = True
+DEBUG = False
 EPOCHS = 1 if DEBUG else 50000
 logger.disabled = not DEBUG
 
@@ -151,6 +156,7 @@ class CNNKyticko(pl.LightningModule):
         self.accuracy = Accuracy()
 
     def forward(self, x):
+        print("x.shape: ", x.shape)
         x = self.model(x)
         return x
 
@@ -266,16 +272,27 @@ def main(hparams):
         model = CNNKyticko()
         # load a model (in models/<name>)
         logger.debug("created a torch class")
-        model.load_state_dict(torch.load(path))
+        model.load_state_dict(torch.load(path, map_location=torch.device('cpu')))
+
         model.eval()
         logger.debug("model has been loaded successfully!!! :)")
+        logger.debug("testing how the model predicts...")
+        img_path = "../dataset/non_target_dev/f407_01_f13_i0_0.png"
+
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Grayscale(num_output_channels=1)
+        ])
+        image = transform(np.array(Image.open(img_path))).unsqueeze(0)
+
+        print(f"Score: {model(image).detach().ravel()[0]}")
 
 
 if __name__ == "__main__":
 
     # only CPU tests
     if not torch.cuda.is_available():
-        hparams = {"train": True,
+        hparams = {"train": False,
                    "model_dir": "..",
                    "model_name": "test.pt",
                    "root_dir": "../",
@@ -286,3 +303,4 @@ if __name__ == "__main__":
         main(hparams)
         hparams["train"] = False
         main(hparams)
+

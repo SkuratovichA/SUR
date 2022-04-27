@@ -1,11 +1,17 @@
-#from dataset import Dataset
+# File: map.py
+# Author: Maksim Tikhonov <xtikho00@vutbr.cz>
+# Date: 27.4.2022, 3.42 AM
+
 import dataset as data
 import numpy as np
 from numpy import sum
 from MAP.dataset import Dataset
+from MAP.dataset import VoiceActivityDetector
 from sklearn.mixture import BayesianGaussianMixture
 import os
+import librosa as lb
 import pickle
+from librosa.feature import mfcc
 
 class Classifier:
     
@@ -15,25 +21,12 @@ class Classifier:
                     non_target_dev='../dataset/non_target_dev'): """
     def __init__(self, hparams):
         self.hparams = hparams
-        # train datasets
-        print("CREATING DATASETS...")
-        self.train_d = Dataset(directories=self.hparams["dataset_dir"]["target"], aug=True)
-        self.train_nd = Dataset(directories=self.hparams["dataset_dir"]["non_target"], aug=True)
-        #remove before eval
-        #self.eval = data.Dataset(directiories=self.hparams["eval_dataset"])
-        self.test_d = Dataset(directories=self.hparams["dev_dataset"]["target"]) 
-        self.test_nd = Dataset(directories=self.hparams["dev_dataset"]["non_target"])
+        # CREATING DATASETS
         if hparams["train"]:
+            self.train_d = Dataset(directories=self.hparams["dataset_dir"]["target"], aug=True)
+            self.train_nd = Dataset(directories=self.hparams["dataset_dir"]["non_target"], aug=True)
             self.train_t = self.train_d.get_wavsMfcc()
             self.train_n = self.train_nd.get_wavsMfcc()
-            print("TRAINING...")
-            self.train()
-        else:
-            self.load()
-        print("EVALUATING...")
-        self.evaluateIter()
-        print("SAVING...")
-        self.save()
 
     def train(self):
         self.bgmm_target = BayesianGaussianMixture(n_components=1,  random_state=69, init_params='random', max_iter=2000).fit(self.train_t)
@@ -41,7 +34,6 @@ class Classifier:
 
     def save(self):
         ''' Save target bgmm model '''
-        
         with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["target"]), 'wb') as file:
             pickle.dump(self.bgmm_target, file)
         ''' Save non-target bgmm model '''
@@ -50,10 +42,10 @@ class Classifier:
 
     def load(self):
         ''' Load target bgmm model '''
-        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["non_target"]), 'rb') as file:
+        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["target"]), 'rb') as file:
             self.bgmm_target = pickle.load(file)
         ''' Load target bgmm model '''
-        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["target"]), 'rb') as file:
+        with open(os.path.join(self.hparams["model_dir"], self.hparams["model_name"]["non_target"]), 'rb') as file:
             self.bgmm_non_target = pickle.load(file)
 
     def print_res(self, scores, printMe=True):
@@ -91,13 +83,22 @@ class Classifier:
         return maximize_me
 
     def evaluate(self, filename):
-        ll_t = self.bgmm_target.score_samples(self.eval.wavsMfcc[filename])
-        ll_n = self.bgmm_non_target.score_samples(self.eval.wavsMfcc[filename])
+        # get file
+        sig, rate = lb.load(filename, sr=16000)
+              
+        sig = sig[26000:] # cut first 2 seconds
+        VAD = VoiceActivityDetector()
+        sig = VAD.process(sig) # cut silence
+
+        sig = (sig - sig.mean()) / np.abs(sig).max()
+        sig = mfcc(y=sig, sr=rate).T
+        # evaluate
+        ll_t = self.bgmm_target.score_samples(sig)
+        ll_n = self.bgmm_non_target.score_samples(sig)
         return sum(ll_t) - sum(ll_n), int((sum(ll_t) - sum(ll_n)) > 0)
 
     def evaluateIter(self):
         # change test to some testdir
-        print(self.test_d.wavsMfcc)
         for testname, wav in self.test_nd.wavsMfcc.items():
             ll_t = self.bgmm_target.score_samples(self.test_nd.wavsMfcc[testname])
             ll_n = self.bgmm_non_target.score_samples(self.test_nd.wavsMfcc[testname])

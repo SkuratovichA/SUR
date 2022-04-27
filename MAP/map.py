@@ -93,7 +93,7 @@ class Classifier:
     def evaluate(self, filename):
         ll_t = self.bgmm_target.score_samples(self.eval.wavsMfcc[filename])
         ll_n = self.bgmm_non_target.score_samples(self.eval.wavsMfcc[filename])
-        return f"{(sum(ll_t) - sum(ll_n)):.2f}", int((sum(ll_t) - sum(ll_n)) > 0)
+        return sum(ll_t) - sum(ll_n), int((sum(ll_t) - sum(ll_n)) > 0)
 
     def evaluateIter(self):
         # change test to some testdir

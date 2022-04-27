@@ -36,7 +36,9 @@ class NeuralPCAClassifier(Classifier):
             NEURAL_PCA.neural_pca.main(hparams)
 
         if self.hparams["eval"]:
-            self.u, self.mean = PCADataset(root_dir=hparams["root_dir"], batch_size=16).get_u_mean()
+            with open(self.hparams["u_mean"], "rb") as f:
+                self.u = np.load(f)
+                self.mean = np.load(f)
             path = os.path.join(hparams["model_dir"], hparams["model_name"])
             self.model = NeuralPCA()
             logger.debug(f"model path: {path}")
@@ -49,7 +51,7 @@ class NeuralPCAClassifier(Classifier):
            transforms.Grayscale(num_output_channels=1)
         ])
         image = (NEURAL_PCA.neural_pca.convert_pil_to_tensor_and_transform(filename, transform))  # numpy form
-        image = torch.tensor((image - self.mean.numpy()).dot(self.u.T.numpy())).unsqueeze(0)
+        image = torch.tensor((image - self.mean).dot(self.u.T)).unsqueeze(0)
 
         soft = self.model(image).detach().ravel()[0]
         return soft, int(soft > .5)
@@ -71,6 +73,7 @@ class MAPClassifier(Classifier):
 
     def predict(self, filename):
         soft, hard = self.model.evaluate(filename)
+        return soft, hard
 
 
 class CNNClassifier(Classifier):

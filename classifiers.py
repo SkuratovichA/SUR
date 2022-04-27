@@ -1,5 +1,7 @@
 # File: classifiers.py
-# Authors: Skuratovich Aliaksandr <xskura01@vutbr.cz>, Tikhonov Maksim <xtikho00@vutbr.cz>
+# Authors: 
+#    Skuratovich Aliaksandr <xskura01@vutbr.cz>
+#    Tikhonov Maksim <xtikho00@vutbr.cz>
 # Date: 27.4.2022
 
 

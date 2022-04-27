@@ -1,0 +1,34 @@
+default: &default
+  train: True # if not true -- load
+  eval: True
+  model_dir: ./models
+  dataset_dir: ./dataset
+  eval_dir: ./eval
+  eval_out: output
+  GPU: 0
+  root_dir: .
+  wandb_entity: skuratovich
+
+CNN:
+  <<: *default
+  train: False
+  eval: False
+  model_name: CNNKyticko.pt
+  eval_out: cnn_out.txt
+
+MAP:
+  <<: *default
+  train: True
+  eval: True
+  dataset_dir: {non_target: ./dataset/non_target_train, target: ./dataset/target_train}
+  model_name: {target: bgmm_target.pkl, non_target: bgmm_non_target.pkl}
+  dev_dataset: {non_target: ./dataset/non_target_dev, target: ./dataset/target_dev}
+  eval_out: map_out.txt
+
+Neural_PCA:
+  <<: *default
+  train: False
+  eval: False
+  model_name: NeuralPCA.pt
+  eval_out: Neural_PCA_out.txt
+  u_mean: ./NEURAL_PCA/u_mean.npy

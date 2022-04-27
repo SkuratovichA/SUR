@@ -162,7 +162,6 @@ class Dataset:
               sig = sig[26000:] # cut first 2 seconds
               VAD = VoiceActivityDetector()
               sig = VAD.process(sig) # cut silence
-              #sig = VAD.get_voice_samples()
 
               if aug: # augment 
                 self.__augment_data(sig, f, rate)

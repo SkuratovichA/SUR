@@ -78,12 +78,17 @@ class Classifier:
         print(f"MAXIMIZE ME: {maximize_me}")
         return maximize_me
 
-    def evaluate(self):
+    def evaluate(self, filename):
+        ll_t = self.bgmm_target.score_samples(self.eval.wavsMfcc[filename])
+        ll_n = self.bgmm_non_target.score_samples(self.eval.wavsMfcc[filename])
+        return f"{(sum(ll_t) - sum(ll_n)):.2f}", int((sum(ll_t) - sum(ll_n)) > 0)
+
+    def evaluateIter(self):
         # change test to some testdir 
         for _, test in enumerate(self.test_nd.wavsMfcc):
             ll_t = self.bgmm_target.score_samples(test)
             ll_n = self.bgmm_non_target.score_samples(test)
-            print(test.split(), ":", int(sum(ll_t) < sum(ll_n)), f"{(sum(ll_t) - sum(ll_n)):.2f}    {int((sum(ll_t) - sum(ll_n)) > 0)}", file=self.hparams["eval_dir"]+"/"+self.params["eval_out"])
+            print(test.split(), ":", f"{(sum(ll_t) - sum(ll_n)):.2f, int(sum(ll_t) < sum(ll_n))}", file=self.hparams["eval_dir"]+"/"+self.params["eval_out"])
 
     def print_score(self):
 

@@ -89,10 +89,10 @@ class Classifier:
         sig = sig[26000:] # cut first 2 seconds
         VAD = VoiceActivityDetector()
         sig = VAD.process(sig) # cut silence
-
+        # normalise both signal and mfc coefficients
         sig = (sig - sig.mean()) / np.abs(sig).max()
         sig = mfcc(y=sig, sr=rate)
-        sig = (sig - sig.mean()) / np.std(sig).T
+        sig = ((sig - sig.mean()) / np.std(sig)).T
         # evaluate
         ll_t = self.bgmm_target.score_samples(sig)
         ll_n = self.bgmm_non_target.score_samples(sig)

@@ -12,7 +12,12 @@ import torch
 
 class Augmentor:
   '''Augmentor class, augments stuff'''
+
+  def __init__(self, hparams):
+      self.hparams = hparams
+
   def augment_data(self, data, sr):
+    
     data = torch.tensor(data).unsqueeze(0)
     val = np.random.rand()
 
@@ -36,14 +41,14 @@ class Augmentor:
     # rir scale factor has to be > 0
     if val < 0.1:
       val=0.1
-    reverb = sb.processing.speech_augmentation.AddReverb('samples/rir_samples/rirs.csv', 
+    reverb = sb.processing.speech_augmentation.AddReverb('../samples/rir_samples/rirs.csv', 
                                                       sorting='random',
                                                       rir_scale_factor=val)
     return reverb(data, torch.ones(1))
 
   def __add_crowd_noise(self, data):
 
-    noisifier = sb.processing.speech_augmentation.AddNoise('./samples/noise_samples/noise.csv', normalize=True)
+    noisifier = sb.processing.speech_augmentation.AddNoise('../samples/noise_samples/noise.csv', normalize=True)
     return noisifier(data, torch.ones(1))
 
   def __add_noise(self, data, val):
@@ -101,7 +106,7 @@ class VoiceActivityDetector:
         return self.out_buffer
 
 class Dataset:
-    def __init__(self, directories, extensions=None, aug=False):
+    def __init__(self, hparams, filenames, extensions=None, aug=False):
         r"""
         Creates a dataset files in specified directories.
 
@@ -109,13 +114,14 @@ class Dataset:
         :param extensions: one of 'wav', 'png'. If None, both are included.
         :return: dictionary of type {'<person id>' : {'png' : filename.png, 'wav' : filename.wav}}
         """
-        #self.wavs = {}      # clear wavs
+        
+
         self.wavsMfcc = {}  # mfcc wavs
         self.pngs = {}
         self.samples = {}
         self.dirfilter = lambda x: os.path.splitext(os.path.basename(x))  # 'smth/honza.wav' -> ['honza', 'wav']
         self.file_extension = lambda x: self.dirfilter(x)[1][1:]
-        self.augmentor = Augmentor()
+        self.augmentor = Augmentor(hparams)
 
         extensions = [extensions] if isinstance(extensions, str) else extensions
         if extensions == 'wav':
@@ -126,27 +132,27 @@ class Dataset:
           fnames = lambda d: glob(d + "/*.png") + glob(d + '/*.wav')  # noqa
         else:
           raise ValueError(f"{extensions} is not supported. Expecting one of ['wav', 'png', ['wav', 'png']]")
-        directories = [directories] if isinstance(directories, str) else directories
-        for directory in directories:
-          for f in fnames(directory):
-            if self.file_extension(f) == 'wav':
-              sig, rate = lb.load(f, sr=16000)
-              assert rate == 16000, f"sample rate must be 16kHz, got {rate} for {f}"
-              
-              sig = sig[26000:] # cut first 2 seconds
-              VAD = VoiceActivityDetector()
-              sig = VAD.process(sig) # cut silence
+        #directories = [directories] if isinstance(directories, str) else directories
+        #for directory in directories:
+        for f in filenames:
+          if self.file_extension(f) == 'wav':
+            sig, rate = lb.load(f, sr=16000)
+            assert rate == 16000, f"sample rate must be 16kHz, got {rate} for {f}"
+            
+            sig = sig[26000:] # cut first 2 seconds
+            VAD = VoiceActivityDetector()
+            sig = VAD.process(sig) # cut silence
 
-              if aug: # augment 
-                self.__augment_data(sig, f, rate)
+            if aug: # augment 
+              self.__augment_data(sig, f, rate)
 
-              sig = (sig - sig.mean()) / np.abs(sig).max()
-              sig = mfcc(y=sig, sr=rate)
-              sig = (sig - sig.mean()) / np.std(sig)
-              self.wavsMfcc[f] = sig.T
+            sig = (sig - sig.mean()) / np.abs(sig).max()
+            sig = mfcc(y=sig, sr=rate)
+            sig = (sig - sig.mean()) / np.std(sig)
+            self.wavsMfcc[f] = sig.T
 
-            elif self.file_extension(f) == 'png':
-              continue
+          elif self.file_extension(f) == 'png':
+            continue
 
         #if not self.pngs or not self.wavsMfcc :
         #  raise ValueError("Directory with train or(and) test samples does not exist")
@@ -158,12 +164,6 @@ class Dataset:
           aug_data[index] = mfcc(y=aug_data[index], sr=rate)
           aug_data[index] = (aug_data[index] - aug_data[index].mean()) / np.std(aug_data[index])
           self.wavsMfcc[filename[:-4]+"-aug"+index+".wav"] = aug_data[index].T
-      """ # random augmentation version
-      aug_data = (aug_data - aug_data.mean()) / np.abs(aug_data).max()
-      aug_data = mfcc(y=aug_data, sr=rate)
-      aug_data = (aug_data - aug_data.mean()) / np.std(aug_data)
-      self.wavsMfcc[filename[:-4]+"-aug.wav"] = aug_data.T 
-      """
 
     def get_wavsMfcc(self):
         return np.vstack(list(self.wavsMfcc.values()))

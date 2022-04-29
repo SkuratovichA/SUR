@@ -15,66 +15,39 @@ class Augmentor:
   def augment_data(self, data, sr):
     data = torch.tensor(data).unsqueeze(0)
     val = np.random.rand()
-    _id = np.random.randint(10)
-    aug_data = np.empty([1])
-    try:
 
-      if _id < 2:
-        aug_data = self.__change_speed(data, sr)
-      elif 1 < _id < 6:
-        aug_data = self.__reverb(data, val)
-      elif 5 < _id < 8:
-        aug_data = self.__add_crowd_noise(data)
-      elif 7 < _id < 10:
-        aug_data = self.__add_noise(data, val)
+    # create copy and 5 augmented versions of input signal
+    aug_data = {}
+    aug_data["1"] = data.squeeze().numpy() # copy
+    aug_data["2"] = self.__change_speed(data, sr).squeeze().numpy()
+    aug_data["3"] = self.__reverb(data, val).squeeze().numpy()
+    aug_data["4"] = self.__reverb(data, (1-val)*1.5).squeeze().numpy()
+    aug_data["5"] = self.__add_crowd_noise(data).squeeze().numpy()
+    aug_data["6"] = self.__add_noise(data, val).squeeze().numpy()
 
-    except:
-
-      if _id < 5:
-        aug_data = self.__change_speed(data, sr)
-      else: 
-        aug_data = self.__add_noise(data, val)
-
-    return aug_data.squeeze().numpy()
+    return aug_data
 
   def __change_speed(self, data, sr):
-    '''
-    Weight of this augmentation: 2
-    '''
+
     perturbator = sb.processing.speech_augmentation.SpeedPerturb(orig_freq=sr, speeds=[90, 95, 105, 110])
     return perturbator(data)
 
   def __reverb(self, data, val):
-    ''' 
-    Weight of this augmentation: 5
-    Val - random number, results in 3 cases:
-    < 0.33 - 0.5 RIR scale factor
-    < 0.67 - 1.0 RIR scale factor
-    > 0.66 - 1.5 RIR scale factor
-    '''
-
-    scale_factor = 0.5
-    if 0.33 < val < 0.67:
-      scale_factor = 1
-    elif val > 0.66:
-      scale_factor = 1.5
-    
+    # rir scale factor has to be > 0
+    if val < 0.1:
+      val=0.1
     reverb = sb.processing.speech_augmentation.AddReverb('samples/rir_samples/rirs.csv', 
                                                       sorting='random',
-                                                      rir_scale_factor=scale_factor)
+                                                      rir_scale_factor=val)
     return reverb(data, torch.ones(1))
 
   def __add_crowd_noise(self, data):
-    '''
-    Weight of this augmentation: 2
-    '''
+
     noisifier = sb.processing.speech_augmentation.AddNoise('./samples/noise_samples/noise.csv', normalize=True)
     return noisifier(data, torch.ones(1))
 
   def __add_noise(self, data, val):
-    '''
-    Weight of this augmentation: 2
-    '''
+
     noise = np.random.randn(len(data))
     return data + val*100 * noise
 
@@ -180,10 +153,17 @@ class Dataset:
 
     def __augment_data(self, data, filename, rate):
       aug_data = self.augmentor.augment_data(data, rate)
+      for index, _ in aug_data.items():
+          aug_data[index] = (aug_data[index] - aug_data[index].mean()) / np.abs(aug_data[index]).max()
+          aug_data[index] = mfcc(y=aug_data[index], sr=rate)
+          aug_data[index] = (aug_data[index] - aug_data[index].mean()) / np.std(aug_data[index])
+          self.wavsMfcc[filename[:-4]+"-aug"+index+".wav"] = aug_data[index].T
+      """ # random augmentation version
       aug_data = (aug_data - aug_data.mean()) / np.abs(aug_data).max()
       aug_data = mfcc(y=aug_data, sr=rate)
       aug_data = (aug_data - aug_data.mean()) / np.std(aug_data)
-      self.wavsMfcc[filename[:-4]+"-aug.wav"] = aug_data.T
+      self.wavsMfcc[filename[:-4]+"-aug.wav"] = aug_data.T 
+      """
 
     def get_wavsMfcc(self):
         return np.vstack(list(self.wavsMfcc.values()))

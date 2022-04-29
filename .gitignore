@@ -1,6 +1,6 @@
 __pycache__/
 eval/
 dataset/
-Neural_PCA_predictions.txt
 MAP_predictions.txt
+Neural_PCA_predictions.txt
 CNN_predictions.txt

@@ -1,6 +1,6 @@
 default: &default
   train: False # if not true -- load
-  eval: False
+  eval: True
   model_dir: ./models
   dataset_dir: ../dataset
   eval_dir: ../eval
@@ -14,8 +14,6 @@ image_CNN:
 
 audio_MAP_BGMM:
   <<: *default
-  train: True
-  eval: True
   model_name: {target: bgmm_target.pkl, non_target: bgmm_non_target.pkl}
   dev_dataset: {non_target: ../dataset/non_target_dev, target: ../dataset/target_dev}
 

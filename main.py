@@ -18,7 +18,6 @@ formatter = logging.Formatter('(%(levelname)s): %(funcName)s:%(lineno)d %(messag
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
-#logger.disabled = True
 
 pl.utilities.seed.seed_everything(42)
 
@@ -36,7 +35,7 @@ def main(hparams):
             with open(f"{key}_predictions.txt", 'w') as f:
                 for file in glob(f"{hparams['eval_dir']}/*{file_format}"):
                     soft, hard = interface.predict(file)
-                    print(f"{file.split('/')[-1]} {soft:.2f} {hard}", file=f)
+                    print(f"{file.split('/')[-1][:-4]} {soft:.2f} {hard}", file=f)
 
 
 # parse hyperpyyaml

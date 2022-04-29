@@ -3,7 +3,7 @@ default: &default
   eval: True
   model_dir: ./models
   dataset_dir: ./dataset
-  eval_dir: ./tests
+  eval_dir: ./eval
   GPU: 0
   root_dir: .
   wandb_entity: skuratovich

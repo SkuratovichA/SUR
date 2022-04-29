@@ -1,3 +1,6 @@
 __pycache__/
-__eval__/
-__dataset__/
+eval/
+dataset/
+Neural_PCA_predictions.txt
+MAP_predictions.txt
+CNN_predictions.txt

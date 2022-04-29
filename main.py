@@ -39,11 +39,8 @@ def main(hparams):
                     print(f"{file.split('.')[-2]} {soft:.4f} {hard}", file=f)
 
 
-# parse hyperpyyaml
 with open(sys.argv[1], 'r') as stream:
     hparams = yaml.safe_load(stream)
 hparams |= hparams["default"]
 del hparams['default']
-# print(hparams.keys())
-# exit(0)
 main(hparams)

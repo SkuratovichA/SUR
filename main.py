@@ -36,7 +36,7 @@ def main(hparams):
             with open(f"{key}_predictions.txt", 'w') as f:
                 for file in glob(f"{hparams['eval_dir']}/*{file_format}"):
                     soft, hard = interface.predict(file)
-                    print(f"{file.split('/')[-1]} {soft:.2f} {hard}", file=f)
+                    print(f"{file.split('.')[-2]} {soft:.4f} {hard}", file=f)
 
 
 # parse hyperpyyaml

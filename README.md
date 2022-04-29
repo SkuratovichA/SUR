@@ -5,13 +5,13 @@
 
 
 ## Structure
-- `CNN/`: implementation of a Binary clasification based on a Convolutional Neural Network
-- `MAP/`: Maximum A-posteriori Classifier based on the Bayesian Gaussian Mixture models.
-- `NEURAL_PCA/`: Binary classification using feed-forward neural network wirh preprocessing and feature extraction with Principal Component Analysis.
+- `src/CNN/`: implementation of a Binary clasification based on a Convolutional Neural Network
+- `src/MAP/`: Maximum A-posteriori Classifier based on the Bayesian Gaussian Mixture models.
+- `src/NEURAL_PCA/`: Binary classification using feed-forward neural network wirh preprocessing and feature extraction with Principal Component Analysis.
+- `src/models/`: Directory with ready models.
+- `src/main.py`: The main script.
+- `src/hyperparams.yaml`: hyperparameters to perform the training and/or evaluating.
 - `dataset/`: Small dataset with `.wav` and `.png` files to train on.
-- `models/`: Directory with ready models.
-- `main.py`: The main script.
-- `hyperparams.yaml`: hyperparameters to perform the training and/or evaluating.
 
 
 

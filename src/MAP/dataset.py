@@ -11,50 +11,58 @@ import speechbrain as sb
 import torch
 
 class Augmentor:
-  '''Augmentor class, augments stuff'''
 
-  def __init__(self, hparams):
-      self.hparams = hparams
+	def __init__(self, hparams):
+		self.hparams = hparams
 
-  def augment_data(self, data, sr):
-    
-    data = torch.tensor(data).unsqueeze(0)
-    val = np.random.rand()
+	def augment_data(self, data, sr):
+		
+		data = torch.tensor(data).unsqueeze(0)
+		val = np.random.rand()
 
-    # create copy and 5 augmented versions of input signal
-    aug_data = {}
-    aug_data["1"] = data.squeeze().numpy() # copy
-    aug_data["2"] = self.__change_speed(data, sr).squeeze().numpy()
-    aug_data["3"] = self.__reverb(data, val).squeeze().numpy()
-    aug_data["4"] = self.__reverb(data, (1-val)*1.5).squeeze().numpy()
-    aug_data["5"] = self.__add_crowd_noise(data).squeeze().numpy()
-    aug_data["6"] = self.__add_noise(data, val).squeeze().numpy()
+		aug_data = {}
+		try: 
+		# create copy and 5 augmented versions of input signal		
+			aug_data["1"] = data.squeeze().numpy() # copy
+			aug_data["2"] = self.__change_speed(data, sr).squeeze().numpy()
+			aug_data["3"] = self.__reverb(data, val).squeeze().numpy()
+			aug_data["4"] = self.__reverb(data, (1-val)*1.5).squeeze().numpy()
+			aug_data["5"] = self.__add_crowd_noise(data).squeeze().numpy()
+			aug_data["6"] = self.__add_noise(data, val).squeeze().numpy()
+			
+		except: # no ../samples
 
-    return aug_data
+			aug_data["1"] = data.squeeze().numpy() # copy
+			aug_data["2"] = self.__change_speed(data, sr).squeeze().numpy()
+			aug_data["3"] = self.__add_noise(data, 1-val).squeeze().numpy()
+			aug_data["4"] = self.__add_noise(data, val).squeeze().numpy()
 
-  def __change_speed(self, data, sr):
+		return aug_data 
+		
 
-    perturbator = sb.processing.speech_augmentation.SpeedPerturb(orig_freq=sr, speeds=[90, 95, 105, 110])
-    return perturbator(data)
+	def __change_speed(self, data, sr):
 
-  def __reverb(self, data, val):
-    # rir scale factor has to be > 0
-    if val < 0.1:
-      val=0.1
-    reverb = sb.processing.speech_augmentation.AddReverb('../samples/rir_samples/rirs.csv', 
-                                                      sorting='random',
-                                                      rir_scale_factor=val)
-    return reverb(data, torch.ones(1))
+		perturbator = sb.processing.speech_augmentation.SpeedPerturb(orig_freq=sr, speeds=[90, 95, 105, 110])
+		return perturbator(data)
 
-  def __add_crowd_noise(self, data):
+	def __reverb(self, data, val):
+		# rir scale factor has to be > 0
+		if val < 0.1:
+			val = 0.1
+		reverb = sb.processing.speech_augmentation.AddReverb(os.path.join(self.hparams["samples_dir"], 'rir_samples/rirs.csv'), 
+                                                      		sorting='random',                                                                                                                                 
+                                                      		rir_scale_factor=val)
+		return reverb(data, torch.ones(1))
 
-    noisifier = sb.processing.speech_augmentation.AddNoise('../samples/noise_samples/noise.csv', normalize=True)
-    return noisifier(data, torch.ones(1))
+	def __add_crowd_noise(self, data):                                                      
 
-  def __add_noise(self, data, val):
+		noisifier = sb.processing.speech_augmentation.AddNoise(os.path.join(self.hparams["samples_dir"], 'noise_samples/noise.csv'), normalize=True)
+		return noisifier(data, torch.ones(1))
 
-    noise = np.random.randn(len(data))
-    return data + val*100 * noise
+	def __add_noise(self, data, val):
+
+		noise = np.random.randn(len(data))
+		return data + val*100 * noise
 
 class VoiceActivityDetector:
 
@@ -106,70 +114,62 @@ class VoiceActivityDetector:
         return self.out_buffer
 
 class Dataset:
-    def __init__(self, hparams, filenames, extensions=None, aug=False):
-        r"""
-        Creates a dataset files in specified directories.
+	
+	def __init__(self, hparams, filenames, extensions=None, aug=False):
+		"""
+		Creates dataset based on given filenames
+		Also augments data
+		"""
 
-        :param directories: list of directories or a string representing a directory
-        :param extensions: one of 'wav', 'png'. If None, both are included.
-        :return: dictionary of type {'<person id>' : {'png' : filename.png, 'wav' : filename.wav}}
-        """
-        
+		self.wavsMfcc = {}  # mfcc wavs
+		self.pngs = {}
+		self.samples = {}
+		self.dirfilter = lambda x: os.path.splitext(os.path.basename(x))  # 'smth/honza.wav' -> ['honza', 'wav']
+		self.file_extension = lambda x: self.dirfilter(x)[1][1:]
+		self.augmentor = Augmentor(hparams)
 
-        self.wavsMfcc = {}  # mfcc wavs
-        self.pngs = {}
-        self.samples = {}
-        self.dirfilter = lambda x: os.path.splitext(os.path.basename(x))  # 'smth/honza.wav' -> ['honza', 'wav']
-        self.file_extension = lambda x: self.dirfilter(x)[1][1:]
-        self.augmentor = Augmentor(hparams)
+		extensions = [extensions] if isinstance(extensions, str) else extensions
+		if extensions == 'wav':
+			fnames = lambda d: glob(d + '/*.wav')  # noqa
+		elif extensions == 'png':
+			fnames = lambda d: glob(d + "/*.png")  # noqa
+		elif extensions in ['wav', 'png'] or not extensions:
+			fnames = lambda d: glob(d + "/*.png") + glob(d + '/*.wav')  # noqa
+		else:
+			raise ValueError(f"{extensions} is not supported. Expecting one of ['wav', 'png', ['wav', 'png']]")
+		for f in filenames:
+			if self.file_extension(f) == 'wav':
+				sig, rate = lb.load(f, sr=16000)
+				assert rate == 16000, f"sample rate must be 16kHz, got {rate} for {f}"
 
-        extensions = [extensions] if isinstance(extensions, str) else extensions
-        if extensions == 'wav':
-          fnames = lambda d: glob(d + '/*.wav')  # noqa
-        elif extensions == 'png':
-          fnames = lambda d: glob(d + "/*.png")  # noqa
-        elif extensions in ['wav', 'png'] or not extensions:
-          fnames = lambda d: glob(d + "/*.png") + glob(d + '/*.wav')  # noqa
-        else:
-          raise ValueError(f"{extensions} is not supported. Expecting one of ['wav', 'png', ['wav', 'png']]")
-        #directories = [directories] if isinstance(directories, str) else directories
-        #for directory in directories:
-        for f in filenames:
-          if self.file_extension(f) == 'wav':
-            sig, rate = lb.load(f, sr=16000)
-            assert rate == 16000, f"sample rate must be 16kHz, got {rate} for {f}"
-            
-            sig = sig[26000:] # cut first 2 seconds
-            VAD = VoiceActivityDetector()
-            sig = VAD.process(sig) # cut silence
+				sig = sig[26000:] # cut first 2 seconds
+				VAD = VoiceActivityDetector()
+				sig = VAD.process(sig) # cut silence
 
-            if aug: # augment 
-              self.__augment_data(sig, f, rate)
+				if aug: # augment 
+					self.__augment_data(sig, f, rate)
 
-            sig = (sig - sig.mean()) / np.abs(sig).max()
-            sig = mfcc(y=sig, sr=rate)
-            sig = (sig - sig.mean()) / np.std(sig)
-            self.wavsMfcc[f] = sig.T
+				sig = (sig - sig.mean()) / np.abs(sig).max()
+				sig = mfcc(y=sig, sr=rate)
+				sig = (sig - sig.mean()) / np.std(sig)
+				self.wavsMfcc[f] = sig.T
 
-          elif self.file_extension(f) == 'png':
-            continue
+			elif self.file_extension(f) == 'png':
+				continue
 
-        #if not self.pngs or not self.wavsMfcc :
-        #  raise ValueError("Directory with train or(and) test samples does not exist")
+	def __augment_data(self, data, filename, rate):
+		aug_data = self.augmentor.augment_data(data, rate)
+		#print("TUT:", aug_data)
+		for index, _ in aug_data.items():
+			aug_data[index] = (aug_data[index] - aug_data[index].mean()) / np.abs(aug_data[index]).max()
+			aug_data[index] = mfcc(y=aug_data[index], sr=rate)
+			aug_data[index] = (aug_data[index] - aug_data[index].mean()) / np.std(aug_data[index])
+			self.wavsMfcc[filename[:-4]+"-aug"+index+".wav"] = aug_data[index].T
 
-    def __augment_data(self, data, filename, rate):
-      aug_data = self.augmentor.augment_data(data, rate)
-      for index, _ in aug_data.items():
-          aug_data[index] = (aug_data[index] - aug_data[index].mean()) / np.abs(aug_data[index]).max()
-          aug_data[index] = mfcc(y=aug_data[index], sr=rate)
-          aug_data[index] = (aug_data[index] - aug_data[index].mean()) / np.std(aug_data[index])
-          self.wavsMfcc[filename[:-4]+"-aug"+index+".wav"] = aug_data[index].T
+	def get_wavsMfcc(self):
+		return np.vstack(list(self.wavsMfcc.values()))
 
-    def get_wavsMfcc(self):
-        return np.vstack(list(self.wavsMfcc.values()))
-
-    #def get_wavs(self):
-    #    return self.wavs
+   
 
 
 def main():

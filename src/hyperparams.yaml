@@ -14,8 +14,8 @@ image_CNN:
 
 audio_MAP_BGMM:
   <<: *default
+  samples_dir: ../samples
   model_name: {target: bgmm_target.pkl, non_target: bgmm_non_target.pkl}
-  dev_dataset: {non_target: ../dataset/non_target_dev, target: ../dataset/target_dev}
 
 image_Neural_PCA:
   <<: *default

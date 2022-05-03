@@ -38,8 +38,17 @@ class Classifier:
             self.train_n = self.train_nd.get_wavsMfcc()
 
     def train(self):
-        self.bgmm_target = BayesianGaussianMixture(n_components=1,  random_state=69, init_params='random', max_iter=2000).fit(self.train_t)
-        self.bgmm_non_target = BayesianGaussianMixture(n_components=1, random_state=42, init_params='random', max_iter=2000).fit(self.train_n)
+        self.bgmm_target = BayesianGaussianMixture(
+            n_components=1,
+            random_state=69,
+            init_params='random',
+            max_iter=2000).fit(self.train_t)
+        
+        self.bgmm_non_target = BayesianGaussianMixture(
+            n_components=1,
+            random_state=42,
+            init_params='random',
+            max_iter=2000).fit(self.train_n)
 
     def save(self):
         ''' Save target bgmm model '''
@@ -105,7 +114,9 @@ class Classifier:
         # evaluate
         ll_t = self.bgmm_target.score_samples(sig)
         ll_n = self.bgmm_non_target.score_samples(sig)
-        return sum(ll_t) - sum(ll_n), int((sum(ll_t) - sum(ll_n)) > 0)
+        
+        soft_decision = sum(ll_t) - sum(ll_n)
+        return soft_decision, int(soft_decision > 0)
 
     def evaluateIter(self):
         # change test to some testdir
